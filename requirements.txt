@@ -1,0 +1,51 @@
+
+# PyJWT removed - using session-based authentication
+cachetools
+chromadb
+cryptography
+fastapi
+httpx
+litellm
+motor
+mysql-connector-python
+networkx
+numpy
+openai
+passlib[bcrypt]
+pydantic-settings
+pydantic
+pymongo
+pytest-asyncio
+pytest
+python-dotenv
+python-multipart
+redis
+sse-starlette
+tenacity
+uvicorn[standard]
+click
+h11
+# P0 Modernization New Dependencies
+slowapi
+circuitbreaker
+rq
+structlog
+# P1 Modernization New Dependencies
+prometheus-client
+opentelemetry-api
+opentelemetry-sdk
+opentelemetry-instrumentation-fastapi
+psutil
+email-validator>=2.0.0
+aiosmtplib>=3.0.0
+# P0 File Storage Dependencies
+minio>=7.2.0
+python-magic>=0.4.27
+Pillow>=10.0.0
+# Configuration File Monitoring
+watchdog>=3.0.0
+# Resume Agent File Processing Dependencies
+pypdf>=4.0.0
+python-docx>=1.1.0
+pytesseract>=0.3.10
+aiofiles>=23.0.0
