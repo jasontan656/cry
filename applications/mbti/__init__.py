@@ -45,6 +45,13 @@ from applications.mbti.schemas import (
 # 和process_mbti_request函数，用于路由和请求处理
 from applications.mbti.router import router, process_mbti_request
 
+# 导入orchestrate注册中心，用于模块主动注册
+try:
+    from orchestrate.router import router
+    ORCHESTRATE_AVAILABLE = True
+except ImportError:
+    ORCHESTRATE_AVAILABLE = False
+
 # def _get_dynamic_module_info() 定义动态生成模块元信息的函数
 # 函数不接收参数，返回包含动态字段信息的模块信息字典
 def _get_dynamic_module_info():
@@ -120,8 +127,8 @@ def _get_dynamic_module_info():
         },
         "orchestrate_info": {  # 编排信息字典
             # "supported_intents" 键赋值为具体的意图字符串列表
-            # 包含mbti_step1到mbti_step5的完整意图标识，匹配router.py中的实际处理逻辑
-            "supported_intents": ["mbti_step1", "mbti_step2", "mbti_step3", "mbti_step4", "mbti_step5"],
+            # 包含mbti_step1到mbti_step5的完整意图标识，以及数据库查询和模块编排相关的intent，匹配router.py和step1.py中的实际处理逻辑
+            "supported_intents": ["mbti_step1", "mbti_step2", "mbti_step3", "mbti_step4", "mbti_step5", "database_query", "orchestrate_next_module"],
             "step_flow": {  # 步骤流程定义字典
                 # "step1" 键赋值为包含next和description的字典，表示初始MBTI测试引导
                 "step1": {"next": "step2", "description": "初始MBTI测试引导"},
@@ -135,18 +142,12 @@ def _get_dynamic_module_info():
                 "step5": {"next": None, "description": "最终报告生成"}
             },
             "data_flow": {  # 数据流转定义字典
-                # "input_validation" 键赋值为验证函数的完整路径字符串
-                # 指向entry.validators.data_validator模块的validate_request_data函数
-                "input_validation": "entry.validators.data_validator.validate_request_data",
                 # "step_orchestrate" 键赋值为编排函数的完整路径字符串
                 # 指向applications.mbti.router模块的process方法
                 "step_orchestrate": "applications.mbti.router.process",
                 # "result_storage" 键赋值为存储函数的完整路径字符串
                 # 指向orchestrate模块的database存储功能
-                "result_storage": "orchestrate.database.save_mbti_result",
-                # "frontend_response" 键赋值为响应函数的完整路径字符串
-                # 指向orchestrate模块的entry响应处理功能
-                "frontend_response": "orchestrate.entry.process_response"
+                "result_storage": "orchestrate.database.save_mbti_result"
             },
             "field_mappings": {  # 字段映射信息字典（动态获取）
                 # "request_fields" 键通过get_request_fields()调用获取请求字段列表
@@ -160,8 +161,33 @@ def _get_dynamic_module_info():
                 "assessment_fields": get_assessment_fields()
             }
         },
-        # "dependencies" 键赋值为空列表，表示不依赖其他模块
-        "dependencies": [],
+        # "dependencies" 键赋值包含模块依赖关系的列表
+        # 包含强依赖、间接强依赖和请求入口模块
+        # time.py 作为强依赖，提供uuid+时间戳封包工具
+        # orchestrate 作为强依赖，提供中枢路由和模块间通信能力
+        # database 作为间接强依赖，提供用户状态读取和任务断点续传功能
+        # frontend 和 entry 作为请求入口模块，提供intent请求的传入途径
+        "dependencies": [
+            # time.py 模块被列为强依赖项
+            # 没有time.py时程序无法正确运行uuid+时间戳封包功能
+            "time",
+            # orchestrate 模块被列为强依赖项
+            # 没有orchestrate中枢时模块无法激活使用和与其他模块通信
+            "orchestrate",
+            # database 模块被列为间接强依赖项
+            # 没有database时无法读取用户状态进行断点续传
+            # 会导致MBTI测试总是从第一步开始
+            "database",
+            # frontend 模块被列为请求入口依赖项
+            # 前端模块负责触发intent请求的界面交互
+            # 没有frontend时用户无法发起MBTI测试请求
+            "frontend",
+            # entry 模块被列为请求入口依赖项
+            # entry模块作为intent白名单模块，负责读取orchestrate中注册的所有intent
+            # 使用注册的intent作为白名单来验证和放行前端请求
+            # 没有entry时前端请求无法通过intent验证，无法传递到MBTI模块
+            "entry"
+        ],
         "metadata": {  # 模块元数据字典
             # "author" 键赋值为开发团队字符串
             "author": "Career Bot Team",
@@ -285,6 +311,90 @@ def get_orchestrate_info():
     # 不传入参数，返回包含通过schemas.py动态获取的字段映射信息的字典
     # 包含step_flow、data_flow和field_mappings等编排相关信息
     return _get_module_info()["orchestrate_info"]
+
+# def mbti_register_function(registry, module_name, module_info) 定义MBTI模块的注册函数
+# 函数接收注册中心实例、模块名和模块信息，实现自主注册逻辑
+def mbti_register_function(registry, module_name, module_info):
+    """
+    MBTI模块的自主注册函数，向注册中心注册模块能力和处理器
+    
+    参数:
+        registry: RegistryCenter实例，注册中心对象
+        module_name: 模块名称字符串
+        module_info: 模块信息字典
+    """
+    # 注册模块元信息到registry.module_meta
+    registry.module_meta[module_name] = module_info
+    
+    # 注册模块字段信息到registry.module_fields
+    if "interface" in module_info and "schemas" in module_info["interface"]:
+        registry.module_fields[module_name] = module_info["interface"]["schemas"]
+    
+    # 注册模块依赖关系到registry.dependencies
+    if "dependencies" in module_info:
+        registry.dependencies[module_name] = module_info["dependencies"]
+    
+    # 注册意图处理器到registry.intent_handlers
+    # 从模块信息中获取支持的意图列表
+    supported_intents = module_info.get("orchestrate_info", {}).get("supported_intents", [])
+    
+    # 为每个支持的意图注册处理器
+    for intent in supported_intents:
+        if intent == "mbti_step1":
+            # 导入step1处理器并注册（使用实际存在的process函数）
+            from applications.mbti.step1 import process
+            registry.intent_handlers[intent] = process
+        elif intent == "mbti_step2":
+            # 导入step2处理器并注册
+            from applications.mbti.step2 import process
+            registry.intent_handlers[intent] = process
+        elif intent == "mbti_step3":
+            # 导入step3处理器并注册
+            from applications.mbti.step3 import process
+            registry.intent_handlers[intent] = process
+        elif intent == "mbti_step4":
+            # 导入step4处理器并注册
+            from applications.mbti.step4 import process
+            registry.intent_handlers[intent] = process
+        elif intent == "mbti_step5":
+            # 导入step5处理器并注册
+            from applications.mbti.step5 import process
+            registry.intent_handlers[intent] = process
+
+# def register_to_orchestrate() 定义主动注册到中枢的函数
+# 函数不接收参数，执行MBTI模块向orchestrate注册中心的主动注册
+def register_to_orchestrate():
+    """
+    MBTI模块主动向orchestrate注册中心注册
+    实现模块自治的注册机制
+    """
+    # 检查orchestrate是否可用
+    if not ORCHESTRATE_AVAILABLE:
+        print("Warning: Orchestrate not available, skipping registration")
+        return False
+    
+    try:
+        # 使用router中的注册中心实例，确保注册到同一个registry
+        registry = router.registry
+        
+        # 获取模块信息并添加注册函数
+        module_info = get_module_info()
+        module_info['register_function'] = mbti_register_function
+        
+        # 调用注册中心的register_module方法进行注册
+        registry.register_module(module_info)
+        
+        print(f"MBTI模块成功注册到orchestrate注册中心")
+        return True
+        
+    except Exception as e:
+        print(f"MBTI模块注册失败: {str(e)}")
+        return False
+
+# 模块加载时自动注册到orchestrate
+# 只有在orchestrate可用时才执行注册
+if ORCHESTRATE_AVAILABLE:
+    register_to_orchestrate()
 
 # MODULE_READY 通过赋值True设置模块就绪状态标识
 # 用于向外部系统表示该模块已准备就绪，可以正常使用

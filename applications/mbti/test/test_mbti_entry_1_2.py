@@ -39,20 +39,20 @@ generated_request_id = None
 import importlib.util
 import types
 
-# 硬编码导入orchestrate_connector模块，用于数据库查询失败模拟
+# 硬编码导入orchestrate模块，用于数据库查询失败模拟
 # os.path.join 函数通过传入 parent_dir 和文件名参数构造完整文件路径
-# 赋值给 orchestrate_connector_path 变量存储路径字符串
-orchestrate_connector_path = os.path.join(parent_dir, "orchestrate_connector.py")
+# 赋值给 orchestrate_path 变量存储路径字符串
+orchestrate_path = os.path.join(parent_dir, "..", "..", "orchestrate", "orchestrate.py")
 # importlib.util.spec_from_file_location 函数通过传入模块名和文件路径参数
 # 创建模块规范对象，赋值给 spec_orch 变量
-spec_orch = importlib.util.spec_from_file_location("orchestrate_connector", orchestrate_connector_path)
+spec_orch = importlib.util.spec_from_file_location("orchestrate.orchestrate", orchestrate_path)
 # importlib.util.module_from_spec 函数通过传入 spec_orch 规范对象
-# 创建模块实例，赋值给 orchestrate_connector 变量
-orchestrate_connector = importlib.util.module_from_spec(spec_orch)
+# 创建模块实例，赋值给 orchestrate_module 变量
+orchestrate_module = importlib.util.module_from_spec(spec_orch)
 # sys.modules 字典通过键赋值方式将模块实例注册到系统模块表
-sys.modules["orchestrate_connector"] = orchestrate_connector
+sys.modules["orchestrate.orchestrate"] = orchestrate_module
 # spec_orch.loader.exec_module 方法通过传入模块实例参数执行模块加载
-spec_orch.loader.exec_module(orchestrate_connector)
+spec_orch.loader.exec_module(orchestrate_module)
 
 # 硬编码导入mbti主入口模块，遵循正确的系统架构
 # os.path.join 函数通过传入 parent_dir 和 "mbti.py" 参数构造文件路径

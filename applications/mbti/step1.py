@@ -17,9 +17,9 @@ sys.path.insert(0, parent_dir)
 # 使用绝对导入路径utilities.time.Time确保跨环境兼容性
 from utilities.time import Time
 
-# import 语句通过 orchestrate_connector 模块名导入 process_orchestrate_request 函数
-# 使用绝对导入方式，支持测试环境和独立运行环境
-from applications.mbti.orchestrate_connector import process_orchestrate_request
+# 通过绝对导入路径导入orchestrate模块的主入口函数
+# 实现router.py > mbti.py > orchestrate连接中枢主入口传递intent的调用链
+from orchestrate.orchestrate import run as orchestrate_run
 
 
 def is_valid_request_id(request_id_string: str) -> bool:
@@ -138,9 +138,10 @@ async def _check_user_completion_status(user_id: str) -> Dict[str, Union[bool, i
         "table": "user_profile"
     }
 
-    # process_orchestrate_request 函数通过传入 db_request 字典参数被调用
+    # orchestrate_run 函数通过传入 db_request 字典参数被调用
     # await 关键字等待异步函数执行完成，返回响应字典赋值给 db_response 变量
-    db_response = await process_orchestrate_request(db_request)
+    # 实现通过orchestrate连接中枢主入口传递intent调用database需求
+    db_response = await orchestrate_run(db_request)
 
     # db_response.get 方法通过传入 "success" 键和 False 默认值获取成功状态
     # 结果赋值给 success 变量，用于判断数据库查询是否成功
@@ -174,8 +175,9 @@ async def _orchestrate_next_module(user_id: str) -> Dict[str, Union[str, bool]]:
         "completion_status": "all_tests_completed"  # 完成状态
     }
 
-    # 通过编排代理连接器向中枢发送请求  # 调用process_orchestrate_request函数，传入orchestrate_request参数
-    orchestrate_response = await process_orchestrate_request(orchestrate_request)
+    # 通过orchestrate连接中枢主入口向中枢发送请求  # 调用orchestrate_run函数，传入orchestrate_request参数
+    # 实现router.py > mbti.py > orchestrate连接中枢主入口传递intent
+    orchestrate_response = await orchestrate_run(orchestrate_request)
 
     # 返回编排结果  # 如果编排失败，返回默认值
     return orchestrate_response.get("data", {"next_module": "unknown", "success": False})
