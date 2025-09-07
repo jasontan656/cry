@@ -5,7 +5,7 @@ MBTI性格测试中心模块主入口
 
 # from 语句通过 router 模块名导入 process_mbti_request 函数
 # 使用绝对导入方式，支持测试环境和独立运行环境
-from router import process_mbti_request
+from applications.mbti.router import process_mbti_request
 
 
 async def run(request):

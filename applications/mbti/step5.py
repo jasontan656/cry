@@ -20,6 +20,7 @@ parent_dir = os.path.dirname(os.path.dirname(__file__))
 sys.path.insert(0, parent_dir)
 
 # 从utilities模块导入Time类，用于生成带时间戳的request ID
+# 使用绝对导入路径utilities.time.Time确保跨环境兼容性
 from utilities.time import Time
 
 

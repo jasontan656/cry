@@ -19,23 +19,23 @@ ResponseData = Dict[str, Union[str, bool, int]]
 # import 语句通过模块名导入 step1 模块
 # 使用绝对导入方式，支持测试环境和独立运行环境
 # 赋值给 step1 变量，用于后续调用 step1.process() 方法
-import step1
+from applications.mbti import step1
 # import 语句通过模块名导入 step2 模块
 # 使用绝对导入方式，支持测试环境和独立运行环境
 # 赋值给 step2 变量，用于后续调用 step2.process() 方法
-import step2
+from applications.mbti import step2
 # import 语句通过模块名导入 step3 模块
 # 使用绝对导入方式，支持测试环境和独立运行环境
 # 赋值给 step3 变量，用于后续调用 step3.process() 方法
-import step3
+from applications.mbti import step3
 # import 语句通过模块名导入 step4 模块
 # 使用绝对导入方式，支持测试环境和独立运行环境
 # 赋值给 step4 变量，用于后续调用 step4.process() 方法
-import step4
+from applications.mbti import step4
 # import 语句通过模块名导入 step5 模块
 # 使用绝对导入方式，支持测试环境和独立运行环境
 # 赋值给 step5 变量，用于后续调用 step5.process() 方法
-import step5
+from applications.mbti import step5
 
 
 class MBTIRouter:

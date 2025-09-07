@@ -20,6 +20,7 @@ parent_dir = os.path.dirname(os.path.dirname(__file__))
 sys.path.insert(0, parent_dir)
 
 # 从utilities模块导入Time类，用于生成带时间戳的request ID
+# 使用绝对导入路径utilities.time.Time确保跨环境兼容性
 from utilities.time import Time
 
 
@@ -211,7 +212,7 @@ async def process(request: Dict[str, Union[str, int, bool, None, Dict, List]]) -
         
         # 计算完成后，自动触发step5生成最终报告
         # 从 router 模块导入 process_mbti_request 函数，用于路由到step5
-        from router import process_mbti_request
+        from applications.mbti.router import process_mbti_request
         
         # step5_request 通过字典创建step5请求，包含完整的计分结果数据
         step5_request = {

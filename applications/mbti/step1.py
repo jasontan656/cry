@@ -14,11 +14,12 @@ parent_dir = os.path.dirname(os.path.dirname(__file__))
 sys.path.insert(0, parent_dir)
 
 # 从utilities模块导入Time类，用于生成带时间戳的request ID
+# 使用绝对导入路径utilities.time.Time确保跨环境兼容性
 from utilities.time import Time
 
 # import 语句通过 orchestrate_connector 模块名导入 process_orchestrate_request 函数
 # 使用绝对导入方式，支持测试环境和独立运行环境
-from orchestrate_connector import process_orchestrate_request
+from applications.mbti.orchestrate_connector import process_orchestrate_request
 
 
 def is_valid_request_id(request_id_string: str) -> bool:

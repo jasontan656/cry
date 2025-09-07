@@ -17,13 +17,14 @@ import sys
 # 通过 from...import 导入 typing 模块的类型提示工具，使用精确类型定义
 from typing import Dict, List, TypedDict, Union, Optional
 # 通过 import 导入 step3 模块，用于在step2完成后触发step3进一步测试
-import step3
+from applications.mbti import step3
 
 # 添加上级目录到Python路径，以便导入utilities模块
 parent_dir = os.path.dirname(os.path.dirname(__file__))
 sys.path.insert(0, parent_dir)
 
 # 从utilities模块导入Time类，用于生成带时间戳的request ID
+# 使用绝对导入路径utilities.time.Time确保跨环境兼容性
 from utilities.time import Time
 
 
