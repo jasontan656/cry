@@ -1,0 +1,876 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!-- meta 标签通过 charset 设置文档字符编码为 UTF-8 -->
+    <meta charset="UTF-8">
+    <!-- meta 标签通过 viewport 设置响应式视口配置 -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- title 标签设置页面标题为 "Personality Survey" -->
+    <title>Personality Survey</title>
+    <style>
+        /* body 样式通过 font-family 设置字体为 Arial 无衬线字体 */
+        /* line-height 设置行高为 1.6 提升可读性 */
+        /* margin 和 padding 设置为 0 重置默认样式 */
+        /* background-color 设置背景色为浅灰色 */
+        /* font-size 设置基础字体大小为 16px */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f5f5;
+            font-size: 16px;
+            color: #2c3e50;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        /* container 类通过 max-width 设置最大宽度为 800px */
+        /* margin 设置为 0 auto 实现水平居中 */
+        /* padding 设置内边距为 20px */
+        /* background-color 设置背景色为白色 */
+        /* box-shadow 添加阴影效果 */
+        /* border-radius 设置圆角为 10px */
+        /* transition 添加平滑过渡效果 */
+        .container {
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: white;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+            border-radius: 10px;
+            transition: all 0.3s ease;
+        }
+
+        /* header 样式通过 text-align 设置文本居中对齐 */
+        /* margin-bottom 设置底部外边距为 30px */
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        /* h1 标题样式通过 color 设置文字颜色为深蓝色 */
+        /* margin-bottom 设置底部外边距为 10px */
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+
+        /* subtitle 类通过 color 设置文字颜色为灰色 */
+        /* font-size 设置字体大小为 16px */
+        .subtitle {
+            color: #7f8c8d;
+            font-size: 16px;
+        }
+
+        /* question-card 类通过 background 设置背景色为白色 */
+        /* border 设置边框为 1px 实线浅灰色 */
+        /* border-radius 设置圆角为 8px */
+        /* padding 设置内边距为 20px */
+        /* margin-bottom 设置底部外边距为 20px */
+        /* box-shadow 添加轻微阴影效果 */
+        .question-card {
+            background: #ffffff;
+            border: 1px solid #e1e8ed;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        /* question-number 类通过 font-weight 设置字体粗细为粗体 */
+        /* color 设置文字颜色为深蓝色 */
+        /* font-size 设置字体大小为 14px */
+        /* margin-bottom 设置底部外边距为 8px */
+        .question-number {
+            font-weight: bold;
+            color: #3498db;
+            font-size: 14px;
+            margin-bottom: 8px;
+        }
+
+        /* question-text 类通过 font-size 设置字体大小为 16px */
+        /* color 设置文字颜色为深色 */
+        /* margin-bottom 设置底部外边距为 15px */
+        /* line-height 设置行高为 1.5 */
+        .question-text {
+            font-size: 16px;
+            color: #2c3e50;
+            margin-bottom: 15px;
+            line-height: 1.5;
+        }
+
+        /* options 类通过 display 设置为 flex 弹性布局 */
+        /* justify-content 设置主轴对齐方式为两端对齐 */
+        /* align-items 设置交叉轴对齐方式为居中 */
+        /* flex-wrap 设置换行为 wrap */
+        .options {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        /* option 类通过 display 设置为 flex 弹性布局 */
+        /* flex-direction 设置主轴方向为列 */
+        /* align-items 设置交叉轴对齐方式为居中 */
+        /* margin 设置外边距为 5px */
+        /* min-width 设置最小宽度为 80px */
+        /* cursor 设置鼠标样式为指针 */
+        /* transition 添加过渡效果 */
+        .option {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 5px;
+            min-width: 80px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border-radius: 6px;
+            padding: 8px 6px;
+        }
+
+        /* option:hover 伪类通过 background-color 设置悬停时背景色 */
+        .option:hover {
+            background-color: rgba(52, 152, 219, 0.1);
+        }
+
+        /* option:active 伪类通过 transform 设置点击时缩放 */
+        .option:active {
+            transform: scale(0.95);
+        }
+
+        /* option input[type="radio"] 样式通过 margin-bottom 设置底部外边距为 5px */
+        /* transform 设置缩放为 1.2 倍 */
+        .option input[type="radio"] {
+            margin-bottom: 5px;
+            transform: scale(1.2);
+        }
+
+        /* option label 样式通过 font-size 设置字体大小为 12px */
+        /* color 设置文字颜色为灰色 */
+        /* text-align 设置文本居中对齐 */
+        /* cursor 设置鼠标样式为指针 */
+        .option label {
+            font-size: 12px;
+            color: #7f8c8d;
+            text-align: center;
+            cursor: pointer;
+        }
+
+        /* scale-labels 类通过 display 设置为 flex 弹性布局 */
+        /* justify-content 设置主轴对齐方式为两端对齐 */
+        /* margin-top 设置顶部外边距为 10px */
+        /* font-size 设置字体大小为 11px */
+        /* color 设置文字颜色为灰色 */
+        .scale-labels {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 10px;
+            font-size: 11px;
+            color: #95a5a6;
+        }
+
+        /* submit-container 类通过 text-align 设置文本居中对齐 */
+        /* margin-top 设置顶部外边距为 40px */
+        .submit-container {
+            text-align: center;
+            margin-top: 40px;
+        }
+
+        /* submit-btn 类通过 background-color 设置背景色为蓝色 */
+        /* color 设置文字颜色为白色 */
+        /* padding 设置内边距为 15px 30px */
+        /* border 设置边框为无 */
+        /* border-radius 设置圆角为 25px */
+        /* font-size 设置字体大小为 16px */
+        /* cursor 设置鼠标样式为指针 */
+        /* transition 设置过渡效果为 all 0.3s ease */
+        .submit-btn {
+            background-color: #3498db;
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 25px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        /* submit-btn:hover 伪类通过 background-color 设置悬停时背景色为深蓝色 */
+        /* transform 设置悬停时缩放为 1.05 倍 */
+        .submit-btn:hover {
+            background-color: #2980b9;
+            transform: scale(1.05);
+        }
+
+        /* submit-btn:disabled 伪类通过 background-color 设置禁用时背景色为灰色 */
+        /* cursor 设置禁用时鼠标样式为不可点击 */
+        /* transform 设置禁用时缩放为 1 倍 */
+        .submit-btn:disabled {
+            background-color: #bdc3c7;
+            cursor: not-allowed;
+            transform: scale(1);
+        }
+
+        /* error-message 类通过 color 设置文字颜色为红色 */
+        /* text-align 设置文本居中对齐 */
+        /* margin-top 设置顶部外边距为 10px */
+        /* font-size 设置字体大小为 14px */
+        .error-message {
+            color: #e74c3c;
+            text-align: center;
+            margin-top: 10px;
+            font-size: 14px;
+        }
+
+        /* ==========================================
+           响应式设计 - 支持各类设备
+           ========================================== */
+
+        /* 平板设备 (768px - 1023px) */
+        @media (max-width: 1023px) and (min-width: 768px) {
+            .container {
+                max-width: 700px;
+                padding: 25px;
+                margin-top: 15px;
+                margin-bottom: 15px;
+            }
+
+            .header {
+                margin-bottom: 25px;
+            }
+
+            h1 {
+                font-size: 28px;
+                margin-bottom: 15px;
+            }
+
+            .subtitle {
+                font-size: 15px;
+            }
+
+            .question-text {
+                font-size: 15px;
+                margin-bottom: 12px;
+            }
+
+            .option label {
+                font-size: 11px;
+            }
+
+            .submit-btn {
+                padding: 12px 25px;
+                font-size: 15px;
+            }
+        }
+
+        /* 大手机和小平板 (480px - 767px) */
+        @media (max-width: 767px) and (min-width: 480px) {
+            .container {
+                max-width: 90%;
+                padding: 20px;
+                margin-top: 10px;
+                margin-bottom: 10px;
+            }
+
+            .header {
+                margin-bottom: 20px;
+            }
+
+            h1 {
+                font-size: 24px;
+                margin-bottom: 12px;
+            }
+
+            .subtitle {
+                font-size: 14px;
+            }
+
+            .question-text {
+                font-size: 14px;
+                margin-bottom: 10px;
+            }
+
+            .options {
+                flex-direction: row;
+                justify-content: flex-start;
+                gap: 2px;
+                flex-wrap: nowrap;
+                padding: 0 5px;
+            }
+
+            .option {
+                flex-direction: column;
+                flex: 1;
+                min-width: 45px;
+                max-width: 60px;
+                padding: 4px 2px;
+                margin: 0;
+            }
+
+            .option label {
+                font-size: 10px;
+            }
+
+            .submit-btn {
+                padding: 10px 20px;
+                font-size: 14px;
+            }
+
+            .error-message {
+                font-size: 13px;
+                margin-top: 8px;
+            }
+        }
+
+        /* 小手机 (320px - 479px) */
+        @media (max-width: 479px) {
+            body {
+                padding: 5px;
+            }
+
+            .container {
+                max-width: 95%;
+                padding: 15px;
+                margin-top: 5px;
+                margin-bottom: 5px;
+                border-radius: 8px;
+            }
+
+            .header {
+                margin-bottom: 15px;
+            }
+
+            h1 {
+                font-size: 20px;
+                margin-bottom: 8px;
+            }
+
+            .subtitle {
+                font-size: 13px;
+                line-height: 1.4;
+            }
+
+            .question-text {
+                font-size: 13px;
+                margin-bottom: 8px;
+                line-height: 1.4;
+            }
+
+            .options {
+                flex-direction: row;
+                justify-content: flex-start;
+                gap: 1px;
+                flex-wrap: nowrap;
+                padding: 0 3px;
+            }
+
+            .option {
+                flex-direction: column;
+                flex: 1;
+                min-width: 35px;
+                max-width: 50px;
+                padding: 3px 1px;
+                margin: 0;
+            }
+
+            .option input[type="radio"] {
+                transform: scale(1.1);
+                margin-bottom: 3px;
+            }
+
+            .option label {
+                font-size: 9px;
+            }
+
+            .submit-btn {
+                width: 100%;
+                padding: 12px;
+                font-size: 14px;
+                margin-top: 10px;
+            }
+
+            .error-message {
+                font-size: 12px;
+                margin-top: 8px;
+            }
+        }
+
+        /* 超小屏幕 (小于 320px) */
+        @media (max-width: 319px) {
+            .container {
+                max-width: 98%;
+                padding: 10px;
+                border-radius: 5px;
+            }
+
+            h1 {
+                font-size: 18px;
+            }
+
+            .subtitle {
+                font-size: 12px;
+            }
+
+            .question-text {
+                font-size: 12px;
+            }
+
+            .options {
+                flex-direction: row;
+                justify-content: flex-start;
+                gap: 1px;
+                flex-wrap: nowrap;
+                padding: 0 2px;
+            }
+
+            .option {
+                flex: 1;
+                padding: 2px 1px;
+                min-width: 30px;
+                max-width: 45px;
+                margin: 0;
+            }
+
+            .option label {
+                font-size: 9px;
+            }
+
+            .submit-btn {
+                padding: 10px;
+                font-size: 13px;
+            }
+        }
+
+        /* 大屏幕优化 (1200px+) */
+        @media (min-width: 1200px) {
+            .container {
+                max-width: 900px;
+                padding: 30px;
+            }
+
+            h1 {
+                font-size: 32px;
+            }
+
+            .subtitle {
+                font-size: 18px;
+            }
+
+            .question-text {
+                font-size: 17px;
+            }
+
+            .submit-btn {
+                padding: 15px 35px;
+                font-size: 17px;
+            }
+        }
+
+        /* 横屏手机优化 */
+        @media (max-height: 500px) and (orientation: landscape) {
+            .container {
+                margin-top: 5px;
+                margin-bottom: 5px;
+            }
+
+            .header {
+                margin-bottom: 15px;
+            }
+
+            h1 {
+                font-size: 18px;
+                margin-bottom: 5px;
+            }
+
+            .question-text {
+                font-size: 12px;
+                margin-bottom: 6px;
+            }
+
+            .options {
+                gap: 4px;
+            }
+
+            .option {
+                padding: 4px 6px;
+                min-width: 45px;
+            }
+
+            .submit-btn {
+                padding: 8px 15px;
+                font-size: 12px;
+            }
+        }
+
+        /* 高分辨率屏幕优化 */
+        @media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+            .container {
+                box-shadow: 0 0 30px rgba(0,0,0,0.15);
+            }
+
+            .option input[type="radio"] {
+                transform: scale(1.3);
+            }
+        }
+
+        /* 触摸设备优化 */
+        @media (hover: none) and (pointer: coarse) {
+            .option {
+                min-height: 44px; /* 苹果推荐的最小触摸目标 */
+                padding: 10px;
+            }
+
+            .option label {
+                font-size: 14px;
+            }
+
+            .submit-btn {
+                min-height: 48px;
+                padding: 12px 24px;
+            }
+        }
+
+        /* 通用响应式字体大小系统 */
+        @media (max-width: 767px) {
+            body {
+                font-size: 14px;
+            }
+        }
+
+        @media (max-width: 479px) {
+            body {
+                font-size: 13px;
+            }
+        }
+
+        @media (max-width: 319px) {
+            body {
+                font-size: 12px;
+            }
+        }
+
+        /* 防止文本过小导致的可用性问题 */
+        @media (max-width: 479px) {
+            .question-text {
+                font-size: max(13px, 1rem);
+            }
+
+            .option label {
+                font-size: max(11px, 0.85rem);
+            }
+        }
+
+        /* 打印样式优化 */
+        @media print {
+            body {
+                background-color: white;
+                color: black;
+                font-size: 12px;
+            }
+
+            .container {
+                box-shadow: none;
+                border: 1px solid #ccc;
+            }
+
+            .submit-btn {
+                display: none;
+            }
+
+            .option input[type="radio"] {
+                display: none;
+            }
+
+            .option {
+                border: 1px solid #ccc;
+                margin: 2px;
+                padding: 4px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- div 容器通过 class="container" 应用容器样式 -->
+    <div class="container">
+        <!-- div 头部通过 class="header" 应用头部样式 -->
+        <div class="header">
+            <!-- h1 标题显示 "Personality Survey" -->
+            <h1>Personality Survey</h1>
+            <!-- p 副标题通过 class="subtitle" 显示说明文字 -->
+            <p class="subtitle">Please rate each statement from 1 (Strongly Disagree) to 5 (Strongly Agree)</p>
+        </div>
+
+        <!-- form 表单通过 id="personality-survey" 设置标识符 -->
+        <form id="personality-survey">
+            <!-- div 通过 id="questions-container" 作为问题容器 -->
+            <div id="questions-container">
+                <!-- 问题将通过 JavaScript 动态加载到此处 -->
+        </div>
+
+            <!-- div 提交按钮容器通过 class="submit-container" 应用样式 -->
+            <div class="submit-container">
+                <!-- button 提交按钮通过 type="submit" 设置为提交类型 -->
+                <!-- class="submit-btn" 应用按钮样式 -->
+                <!-- id="submit-button" 设置标识符 -->
+                <!-- disabled 属性设置初始状态为禁用 -->
+                <button type="submit" class="submit-btn" id="submit-button" disabled>Submit Survey</button>
+                <!-- div 错误信息通过 class="error-message" 应用样式 -->
+                <!-- id="error-message" 设置标识符，初始为隐藏 -->
+                <div class="error-message" id="error-message" style="display: none;"></div>
+        </div>
+        </form>
+    </div>
+
+    <script>
+        // questions 变量声明为数组，存储所有硬编码的问题数据
+        const questions = [
+            "When I'm at a friend's birthday party and see someone standing alone, I usually go over and start a friendly chat to make them feel welcome.",
+            "After spending a whole day with friends, I look forward to some quiet time alone at home to relax and recharge my energy.",
+            "During a group discussion at work, I often share my thoughts out loud as they come to me, rather than keeping them inside.",
+            "I feel most comfortable and focused when I have long stretches of quiet time to work without interruptions.",
+            "At family gatherings, I enjoy being the one who gets everyone laughing and involved in conversations.",
+            "On Friday evenings, I'd rather join friends at a lively restaurant than spend the night quietly at home.",
+            "During team brainstorming sessions, talking through ideas with others usually sparks my best creative thoughts.",
+            "Even when a meeting topic is really interesting, after two hours I start feeling drained and ready to leave.",
+            "At work, I usually speak up with my opinions during team meetings rather than waiting to be asked.",
+            "When I need to discuss something important, I'd rather send a text or email than have a face-to-face conversation.",
+            "While traveling on a bus or train, I often strike up conversations with fellow passengers.",
+            "In group discussions, I prefer to listen quietly and only speak when someone directly asks for my input.",
+            "When working on creative projects, I get more excited about ideas when I can brainstorm with a team rather than alone.",
+            "For hobbies and free time activities, I usually choose things I can do by myself rather than in groups.",
+            "I feel most energized when working on big projects that involve lots of collaboration with other people.",
+            "During meetings, I often share my ideas right away, even if they're not fully formed yet.",
+            "Networking events and meeting new business contacts usually leave me feeling excited rather than tired.",
+            "After a busy week of social activities, I make sure to schedule quiet days to rest and recharge.",
+            "When I'm feeling emotional about something, I usually talk it through with friends to help me understand my feelings.",
+            "I find that having background noise like music or conversation actually helps me focus better on my work.",
+            "I usually make new friends quickly and easily when I meet people in social situations.",
+            "Noisy environments like busy coffee shops make it hard for me to concentrate on what I'm doing.",
+            "I prefer studying or working in places with other people around, like cafes, rather than completely quiet rooms.",
+            "I rarely share personal stories about myself unless someone specifically asks me about them.",
+            "When learning a new skill, I prefer clear, step-by-step instructions that I can follow exactly.",
+            "I get more excited about imagining future inventions and technologies than researching how current tools work.",
+            "When making decisions, I rely heavily on facts and data that I can observe and measure.",
+            "I often notice patterns and symbols in everyday things that other people might overlook.",
+            "When trying to understand a new concept, concrete examples help me grasp it better than abstract theories.",
+            "I get bored when conversations focus too long on small everyday details.",
+            "I can clearly remember specific details like the smell of my grandmother's kitchen or the sound of rain on the roof.",
+            "I often daydream about how the world might look ten years from now.",
+            "I trust hands-on experience and what I've personally seen more than theories or speculation.",
+            "I enjoy exploring \"what if\" scenarios and imagining different possibilities.",
+            "I have a good memory for conversations and can usually remember exactly what people have said.",
+            "I often find myself thinking about the deeper meaning behind people's words and actions.",
+            "I prefer using methods that have been proven to work rather than trying new experimental approaches.",
+            "I can easily connect ideas that seem unrelated and see how they fit together in a bigger picture.",
+            "I notice small changes in my surroundings, like a new painting on the wall or someone's new haircut.",
+            "Sometimes I get so caught up in my thoughts that I miss obvious details around me.",
+            "When learning something new, I like to start with basic facts before moving to more complex theories.",
+            "Artistic works that are abstract and imaginative appeal to me more than realistic paintings.",
+            "I prefer using clear, direct language rather than fancy words or complicated expressions.",
+            "I can often predict trends by noticing small changes and clues that others miss.",
+            "I enjoy activities that involve using my hands and working with physical objects.",
+            "I naturally think in creative ways, using comparisons and word pictures to express ideas.",
+            "I focus more on what's happening right now than on distant future possibilities.",
+            "I get more excited about exploring new ideas than perfecting things that already work well.",
+            "When making important choices, I focus on logical reasons rather than how I feel about them.",
+            "Sometimes I choose options based on caring about others, even when the facts point to a different choice.",
+            "In conversations, I value being clear and accurate more than keeping everyone happy.",
+            "I try to avoid arguments that might hurt people's feelings.",
+            "When solving problems, I like to make lists of pros and cons to help me decide.",
+            "I believe that doing the right thing for people is sometimes more important than being efficient.",
+            "I'm willing to give honest feedback, even if it might sound harsh.",
+            "Before giving criticism, I always consider how the other person might feel.",
+            "I believe rules exist to make things fair for everyone.",
+            "Sometimes being kind is more important to me than being completely right.",
+            "In discussions, I think facts and evidence should be more important than personal experiences.",
+            "I rely heavily on my gut feelings and instincts when making choices.",
+            "I try to set aside my emotions when I need to think clearly about an issue.",
+            "Sometimes caring too much about others' feelings makes it hard for me to make decisions.",
+            "I admire people who think logically and consistently.",
+            "I feel guilty when my choices might make other people unhappy.",
+            "I enjoy exploring the basic principles and rules behind how things work.",
+            "To keep the team working well together, I sometimes agree with ideas even if they don't seem logical to me.",
+            "When judging results, I focus on numbers and measurements I can count.",
+            "I trust my emotional reactions as good guides for making decisions.",
+            "I can handle criticism objectively without taking it personally.",
+            "I care more about people's well-being than about performance numbers.",
+            "I see disagreements as chances to improve ideas rather than create conflict.",
+            "To keep conversations friendly, I sometimes avoid pointing out mistakes.",
+            "I like to set clear deadlines for my projects and stick to them.",
+            "I prefer keeping my schedule flexible so I can decide what to do as I go.",
+            "Before going on a trip, I plan out every detail of the itinerary in advance.",
+            "I get excited when plans change unexpectedly and I have to adapt.",
+            "Having unclear deadlines makes me feel anxious and uncomfortable.",
+            "I think being flexible is often better than sticking to a strict schedule.",
+            "I break big goals into smaller tasks with specific dates attached to them.",
+            "I like to explore all the possibilities before making a final decision.",
+            "I usually finish my work well before the deadline.",
+            "I work best when priorities and tasks are constantly changing.",
+            "I like making quick decisions so I can start taking action right away.",
+            "I prefer to gather more information before making important decisions.",
+            "Having clear processes and steps makes everything run more smoothly.",
+            "Sometimes strict rules feel too limiting and unnecessary.",
+            "I keep my workspace neat and organized so I can find things easily.",
+            "I prefer spontaneous adventures over carefully planned activities.",
+            "I use checklists and to-do lists to track my progress on tasks.",
+            "I like to try things out and experiment before settling on a final plan.",
+            "I set monthly goals for myself and regularly check on my progress.",
+            "Making long-term commitments makes me feel uncomfortable.",
+            "Having predictable daily routines gives me a sense of peace and security.",
+            "I leave some extra time in my schedule for unexpected opportunities.",
+            "I like to finish one task completely before starting something new.",
+            "Having strict schedules sometimes feels like it crushes my creativity."
+        ];
+        // responses 变量声明为空对象，用于存储用户对各题目的回答
+        let responses = {};
+
+        // renderQuestions 函数通过 function 关键字定义
+        // 职责是将 questions 数组中的数据渲染为 HTML 问题卡片
+        function renderQuestions() {
+            // document.getElementById 函数通过传入 'questions-container' 获取容器元素
+            // 返回的 DOM 元素赋值给 container 变量
+            const container = document.getElementById('questions-container');
+            // container.innerHTML 属性通过赋值空字符串清空容器内容
+            container.innerHTML = '';
+
+            // questions.forEach 方法通过传入回调函数遍历问题数组
+            // 回调函数接收 question 字符串和 index 索引作为参数
+            questions.forEach((question, index) => {
+                // questionCard 变量通过 document.createElement 函数创建 div 元素
+                const questionCard = document.createElement('div');
+                // questionCard.className 属性通过赋值 'question-card' 设置 CSS 类名
+                questionCard.className = 'question-card';
+
+                // questionCard.innerHTML 属性通过模板字符串设置内部 HTML 内容
+                // 包含问题编号、问题文本和选择选项的完整结构
+                questionCard.innerHTML = `
+                    <div class="question-number">Question ${index + 1}</div>
+                    <div class="question-text">${question}</div>
+                    <div class="options">
+                        <div class="option">
+                            <input type="radio" name="question_${index}" value="1" id="q${index}_1">
+                            <label for="q${index}_1">1</label>
+                            </div>
+                        <div class="option">
+                            <input type="radio" name="question_${index}" value="2" id="q${index}_2">
+                            <label for="q${index}_2">2</label>
+                            </div>
+                        <div class="option">
+                            <input type="radio" name="question_${index}" value="3" id="q${index}_3">
+                            <label for="q${index}_3">3</label>
+                            </div>
+                        <div class="option">
+                            <input type="radio" name="question_${index}" value="4" id="q${index}_4">
+                            <label for="q${index}_4">4</label>
+                            </div>
+                        <div class="option">
+                            <input type="radio" name="question_${index}" value="5" id="q${index}_5">
+                            <label for="q${index}_5">5</label>
+                        </div>
+                    </div>
+                    <div class="scale-labels">
+                        <span>Strongly Disagree</span>
+                        <span>Strongly Agree</span>
+                </div>
+            `;
+            
+                // container.appendChild 方法通过传入 questionCard 元素将其添加到容器中
+                container.appendChild(questionCard);
+
+                // questionCard.querySelectorAll 方法通过传入选择器获取所有单选按钮
+                // 返回的 NodeList 赋值给 radioButtons 变量
+                const radioButtons = questionCard.querySelectorAll('input[type="radio"]');
+                // radioButtons.forEach 方法通过传入回调函数为每个单选按钮添加事件监听
+                radioButtons.forEach(radio => {
+                    // radio.addEventListener 方法通过传入 'change' 事件和回调函数添加监听器
+                    radio.addEventListener('change', function() {
+                        // responses 对象通过索引赋值存储用户选择
+                        // parseInt 函数将字符串值转换为整数
+                        responses[index] = parseInt(this.value);
+                        // checkAllAnswered 函数被调用检查是否所有问题都已回答
+                        checkAllAnswered();
+                    });
+                });
+            });
+        }
+
+        // checkAllAnswered 函数通过 function 关键字定义
+        // 职责是检查是否所有问题都已回答，并控制提交按钮状态
+        function checkAllAnswered() {
+            // Object.keys 函数通过传入 responses 对象获取已回答问题的索引数组
+            // .length 属性获取数组长度，与 questions.length 比较
+            // 结果赋值给 allAnswered 布尔变量
+            const allAnswered = Object.keys(responses).length === questions.length;
+            
+            // document.getElementById 函数通过传入 'submit-button' 获取提交按钮元素
+            const submitButton = document.getElementById('submit-button');
+            // document.getElementById 函数通过传入 'error-message' 获取错误信息元素
+            const errorMessage = document.getElementById('error-message');
+            
+            // submitButton.disabled 属性通过逻辑非运算符设置按钮禁用状态
+            submitButton.disabled = !allAnswered;
+            
+            // if 条件判断语句检查 allAnswered 变量的值
+            if (allAnswered) {
+                // errorMessage.style.display 属性通过赋值 'none' 隐藏错误信息
+                errorMessage.style.display = 'none';
+            }
+        }
+
+        // document.getElementById 函数通过传入 'personality-survey' 获取表单元素
+        // .addEventListener 方法通过传入 'submit' 事件和回调函数添加提交监听器
+        document.getElementById('personality-survey').addEventListener('submit', function(e) {
+            // e.preventDefault 方法阻止表单默认提交行为
+            e.preventDefault();
+            
+            // Object.keys 函数通过传入 responses 对象获取已回答问题的索引数组
+            // .length 属性获取数组长度，与 questions.length 比较
+            if (Object.keys(responses).length !== questions.length) {
+                // document.getElementById 函数通过传入 'error-message' 获取错误信息元素
+                const errorMessage = document.getElementById('error-message');
+                // errorMessage.textContent 属性通过赋值设置错误提示文本
+                errorMessage.textContent = 'Please answer all questions before submitting.';
+                // errorMessage.style.display 属性通过赋值 'block' 显示错误信息
+                errorMessage.style.display = 'block';
+                return;
+            }
+
+            // submitData 对象通过对象字面量语法创建，包含 intent 和 responses 字段
+            // intent 字段赋值为 'mbti_step2' 字符串
+            // responses 字段赋值为 responses 对象
+            const submitData = {
+                intent: 'mbti_step2',
+                responses: responses
+            };
+
+            // console.log 函数通过传入提示文本和 submitData 对象输出调试信息
+            console.log('Submitting data:', submitData);
+            // alert 函数通过传入提示文本显示提交成功信息
+            // JSON.stringify 函数将 submitData 对象转换为 JSON 字符串
+            alert('Survey completed! Data to be submitted:\n' + JSON.stringify(submitData, null, 2));
+            
+            // TODO: 实际项目中此处应该发送数据到后端
+            // 示例代码（注释状态）：
+            // fetch('/api/mbti', {
+            //     method: 'POST',
+            //     headers: {
+            //         'Content-Type': 'application/json',
+            //     },
+            //     body: JSON.stringify(submitData)
+            // })
+            // .then(response => response.json())
+            // .then(data => {
+            //     console.log('Success:', data);
+            // })
+            // .catch((error) => {
+            //     console.error('Error:', error);
+            // });
+        });
+
+        // renderQuestions 函数在页面加载时被调用，直接渲染硬编码的问题数据
+        renderQuestions();
+    </script>
+</body>
+</html>

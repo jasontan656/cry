@@ -1,0 +1,275 @@
+# =================================
+# 环境变量和敏感文件
+# =================================
+.env
+.env.local
+.env.*.local
+.env.development
+.env.production
+.env.staging
+config/secrets.json
+secrets.json
+credentials.json
+
+# =================================
+# Python
+# =================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+.mypy_cache/
+
+# =================================
+# Node.js / Frontend
+# =================================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
+report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
+.pnpm/
+.yarn/
+.yarnrc.yml
+
+# =================================
+# IDE 和编辑器
+# =================================
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+*.sublime-project
+*.sublime-workspace
+*.tmproj
+*.tmproject
+tmtags
+*.tmbundle
+
+# =================================
+# 操作系统文件
+# =================================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# =================================
+# 日志和调试文件
+# =================================
+*.log
+logs/
+*.log.*
+log/
+debug.log
+error.log
+access.log
+*.log.gz
+*.log.zip
+
+# =================================
+# 临时文件
+# =================================
+*.tmp
+*.temp
+*.swp
+*.bak
+*.backup
+*~
+.cache/
+.tmp/
+temp/
+temporary/
+
+# =================================
+# 数据库文件
+# =================================
+*.db
+*.sqlite
+*.sqlite3
+*.sql
+database.db
+db.sqlite
+db.sqlite3
+
+# =================================
+# 打包和分发
+# =================================
+*.tar.gz
+*.zip
+*.rar
+*.7z
+*.dmg
+*.iso
+*.exe
+*.msi
+*.deb
+*.rpm
+
+# =================================
+# 测试覆盖率
+# =================================
+.coverage
+coverage.xml
+*.cover
+.pytest_cache/
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# =================================
+# Jupyter Notebook
+# =================================
+.ipynb_checkpoints
+*/.ipynb_checkpoints/*
+
+# =================================
+# 虚拟环境
+# =================================
+venv/
+env/
+ENV/
+.venv/
+.conda/
+conda/
+virtualenv/
+pip-log.txt
+pip-delete-this-directory.txt
+.tox/
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# =================================
+# Docker
+# =================================
+.dockerignore
+docker-compose.override.yml
+Dockerfile.dev
+*.dockerfile
+
+# =================================
+# 文档生成
+# =================================
+docs/_build/
+*.pdf
+*.docx
+*.xlsx
+
+# =================================
+# 备份文件
+# =================================
+*.bak
+*.backup
+*~
+*.orig
+*.rej
+
+# =================================
+# 编译文件
+# =================================
+*.pyc
+*.pyo
+*.pyd
+.Python
+__pycache__/
+*.so
+*.dll
+*.dylib
+
+# =================================
+# 网络和缓存
+# =================================
+.pip_cache/
+.cache/
+.npm/
+.yarn-integrity
+
+# =================================
+# CI/CD
+# =================================
+.github/workflows/*.yml.bak
+.gitlab-ci.yml.bak
+
+# =================================
+# 本地配置
+# =================================
+config/local.json
+config/local.yml
+config/local.yaml
+local_settings.py
+settings_local.py
+
+# =================================
+# 敏感数据
+# =================================
+secrets/
+*.key
+*.pem
+*.crt
+*.cer
+*.p12
+*.pfx
+id_rsa
+id_dsa
+*.gpg
+
+# =================================
+# 媒体文件 (可选)
+# =================================
+# *.jpg
+# *.jpeg
+# *.png
+# *.gif
+# *.mp4
+# *.avi
+# *.mov
+
+# =================================
+# 大文件 (使用 Git LFS)
+# =================================
+# *.zip
+# *.tar.gz
+# *.pdf
+# *.mp4
