@@ -38,6 +38,8 @@ opentelemetry-instrumentation-fastapi
 psutil
 email-validator>=2.0.0
 aiosmtplib>=3.0.0
+bcrypt>=4.0.0
+PyJWT>=2.0.0
 # P0 File Storage Dependencies
 minio>=7.2.0
 python-magic>=0.4.27

@@ -1,7 +1,8 @@
 #!/usr/bin/env python3  # 指定Python3解释器运行这个脚本
 # -*- coding: utf-8 -*-  # 声明文件使用UTF-8编码，支持中文字符
 """
-step1.py - MBTI测试引导处理器  # 处理用户点击找工作按钮后的引导
+step1.py - MBTI测试引导处理器
+MBTI测试第一步：接收用户请求，创建request_id，写入用户状态为ongoing，返回英文测试引导信息
 """
 
 import re  # 导入正则表达式模块，用于request ID格式验证
@@ -13,13 +14,13 @@ import os  # 导入os模块，用于路径操作
 parent_dir = os.path.dirname(os.path.dirname(__file__))
 sys.path.insert(0, parent_dir)
 
-# 从utilities模块导入Time类，用于生成带时间戳的request ID
-# 使用绝对导入路径utilities.time.Time确保跨环境兼容性
+# Time 通过绝对导入路径utilities.time.Time获取，用于生成带时间戳的request ID
 from utilities.time import Time
 
-# 通过绝对导入路径导入orchestrate模块的主入口函数
-# 实现router.py > mbti.py > orchestrate连接中枢主入口传递intent的调用链
-from orchestrate.orchestrate import run as orchestrate_run
+# DatabaseOperations 通过绝对导入路径utilities.database.DatabaseOperations获取
+# 用于执行数据库写入操作，设置用户MBTI测试状态
+from utilities.database import DatabaseOperations
+
 
 
 def is_valid_request_id(request_id_string: str) -> bool:
@@ -62,151 +63,72 @@ def validate_and_generate_request_id(provided_request_id: str = None) -> str:
 
 async def process(request: Dict[str, Union[str, int, bool, None]]) -> Dict[str, Union[str, bool]]:
     """
-    处理用户点击找工作按钮的请求
-    返回测试引导信息和测试链接
+    process 通过异步执行处理MBTI测试引导请求
+    先验证request_id并生成新ID，再写入用户状态为ongoing，最后返回测试引导信息
     """
-    # validate_and_generate_request_id 函数通过传入 request.get("request_id") 获取并验证request_id
-    # 如果未传入或格式无效，则生成新的timestamp_uuid格式request ID；如果有效则直接使用
+    # validate_and_generate_request_id 通过调用验证传入的request_id
+    # 若无效或为空则生成新的timestamp_uuid格式ID，返回字符串赋值给request_id
     request_id = validate_and_generate_request_id(request.get("request_id"))
 
-    # 获取用户ID  # 从请求中提取用户标识
+    # user_id 通过字典get方法从request获取用户标识符
+    # 返回字符串或None，赋值给user_id变量用于后续数据库操作
     user_id = request.get("user_id")
 
-    # request.get 方法通过传入 "test_user" 键获取测试模式标识
-    # 返回布尔值或 None，赋值给 test_user 变量
-    test_user = request.get("test_user")
+    # DatabaseOperations() 通过无参构造创建数据库操作实例
+    # 连接到默认的MongoDB实例和careerbot_mongodb数据库，赋值给db变量
+    db = DatabaseOperations()
 
-    # if 条件判断检查 test_user 变量是否为 True 布尔值
-    if test_user is True:
-        # 测试模式下使用预设的默认用户状态，跳过数据库查询
-        # user_status 变量通过字典赋值设置默认测试状态
-        user_status = {
-            "JobFindingRegistryComplete": False,
-            "mbti_step1_complete": False
-        }
-    else:
-        # _check_user_completion_status 函数通过传入 user_id 参数被调用
-        # await 关键字等待异步函数执行完成，返回查询结果赋值给 user_status 变量
-        # 非测试模式下通过中枢查询数据库获取用户状态
-        user_status = await _check_user_completion_status(user_id)
+    # db.find 通过调用DatabaseOperations实例的find方法
+    # 传入集合名"user_status"和过滤条件{"user_id": user_id}
+    # 查询用户状态文档，然后直接执行写入操作
+    db.find("user_status", {"user_id": user_id})
 
-    # 根据用户状态决定下一步骤  # 检查JobFindingRegistryComplete字段决定处理方式
-    if user_status.get("JobFindingRegistryComplete", False):
-        # 用户已完成所有模块注册，返回orchestrate处理
-        return {
-            "request_id": request_id,  # 请求唯一标识符
-            "user_id": user_id,  # 用户标识符
-            "success": True,  # 处理成功标志
-            "step": "orchestrate",  # 返回orchestrate处理
-            "completed": True  # 完成状态布尔值
-        }
-    else:
-        # 用户未完成所有模块注册，检查是否已完成step1
-        step1_completed = user_status.get("mbti_step1_complete", False)
+    # Time.timestamp() 通过调用Time类timestamp方法生成时间戳_uuid格式字符串
+    # 赋值给created_at变量，用于记录用户状态创建时间
+    created_at = Time.timestamp()
 
-        # 如果step1已完成，返回布尔值给router调用step2处理
-        if step1_completed:
-            # 用户已完成step1，返回状态给router调用step2处理
-            return {
-                "request_id": request_id,  # 请求唯一标识符
-                "user_id": user_id,  # 用户标识符
-                "success": True,  # 处理成功标志
-                "step": "mbti_step1",  # 当前步骤标识
-                "completed": True,  # step1完成布尔值
-                "next_step": "mbti_step2"  # 下一步骤标识
-            }
-        else:
-            # 用户未完成step1，直接运行step1逻辑
-            return await _handle_mbti_step_jump(request_id, user_id, 1)
-
-
-async def _check_user_completion_status(user_id: str) -> Dict[str, Union[bool, int]]:
-    """
-    检查用户测试完成状态
-    通过中枢查询数据库，获取JobFindingRegistryComplete和mbti_step1_complete字段
-    如果数据库查询失败，抛出异常拒绝服务
-    """
-    # 构造数据库查询请求字典，包含intent、user_id、query_fields、table四个键
-    # intent 键赋值为 "database_query" 字符串，表示数据库查询意图
-    # user_id 键赋值为传入的 user_id 参数，作为用户标识符
-    # query_fields 键赋值为包含两个字符串的列表，指定查询字段
-    # table 键赋值为 "user_profile" 字符串，指定查询表名
-    db_request = {
-        "intent": "database_query",
+    # db.insert 通过调用DatabaseOperations实例的insert方法
+    # 传入集合名"user_status"和包含user_id、mbti_step1、created_at、last_completed_step、current_step字段的文档
+    # 直接写入用户状态，设置mbti_step1为ongoing，记录创建时间戳和步骤状态
+    db.insert("user_status", {
         "user_id": user_id,
-        "query_fields": ["JobFindingRegistryComplete", "mbti_step1_complete"],
-        "table": "user_profile"
-    }
+        "created_at": created_at,
+        "last_completed_step": "none",
+        "current_step": "mbti_step1"
+    })
 
-    # orchestrate_run 函数通过传入 db_request 字典参数被调用
-    # await 关键字等待异步函数执行完成，返回响应字典赋值给 db_response 变量
-    # 实现通过orchestrate连接中枢主入口传递intent调用database需求
-    db_response = await orchestrate_run(db_request)
+    # _handle_mbti_step_jump 通过await调用异步函数，传入request_id、user_id和步骤编号1
+    # 返回包含测试引导信息的字典，包含预设的英文提示和测试链接
+    return await _handle_mbti_step_jump(request_id, user_id, 1)
 
-    # db_response.get 方法通过传入 "success" 键和 False 默认值获取成功状态
-    # 结果赋值给 success 变量，用于判断数据库查询是否成功
-    success = db_response.get("success", False)
-    
-    # if 条件判断检查 success 变量的布尔值是否为假
-    if not success:
-        # db_response.get 方法通过传入 "error" 键和默认错误消息获取错误信息
-        # 结果赋值给 error_message 变量
-        error_message = db_response.get("error", "Database connection failed")
-        # raise 语句抛出 Exception 异常，传入包含错误信息的格式化字符串
-        # 拒绝服务而不是使用默认值继续执行
-        raise Exception(f"Database query failed: {error_message}")
-
-    # db_response.get 方法通过传入 "data" 键和包含默认状态的字典获取查询数据
-    # 如果 data 键存在但值为空，使用默认值字典
-    # 返回包含 JobFindingRegistryComplete 和 mbti_step1_complete 字段的字典
-    return db_response.get("data", {"JobFindingRegistryComplete": False, "mbti_step1_complete": False})
-
-
-async def _orchestrate_next_module(user_id: str) -> Dict[str, Union[str, bool]]:
-    """
-    编排下一个模块
-    当用户完成所有MBTI测试后，通知中枢编排后续模块
-    """
-    # 构造编排请求  # 使用orchestrate_next_module intent向中枢发起请求
-    orchestrate_request = {
-        "intent": "orchestrate_next_module",  # 编排下一个模块意图
-        "user_id": user_id,  # 用户标识符
-        "current_module": "mbti",  # 当前模块标识
-        "completion_status": "all_tests_completed"  # 完成状态
-    }
-
-    # 通过orchestrate连接中枢主入口向中枢发送请求  # 调用orchestrate_run函数，传入orchestrate_request参数
-    # 实现router.py > mbti.py > orchestrate连接中枢主入口传递intent
-    orchestrate_response = await orchestrate_run(orchestrate_request)
-
-    # 返回编排结果  # 如果编排失败，返回默认值
-    return orchestrate_response.get("data", {"next_module": "unknown", "success": False})
 
 
 async def _handle_mbti_step_jump(request_id: str, user_id: str, current_step: int) -> Dict[str, Union[str, bool]]:
     """
-    处理MBTI step1引导逻辑
-    当用户处于step1时，返回MBTI测试引导信息
+    _handle_mbti_step_jump 通过异步执行处理MBTI测试引导逻辑
+    根据步骤编号返回对应的测试引导信息和预设英文提示
     """
-    # 确认当前步骤为step1  # 只有step1会调用此函数
+    # current_step 等于1时表示用户在MBTI第一步测试引导阶段
+    # 返回包含request_id、user_id、success状态和预设英文引导信息的字典
     if current_step == 1:
-        # 用户在MBTI step1，返回MBTI测试引导
         return {
-            "request_id": request_id,  # 请求唯一标识符
-            "user_id": user_id,  # 用户标识符
-            "success": True,  # 处理成功标志
-            "step": "mbti_step1",  # 当前步骤标识
-            "button_config": "[Take Test](mbti_survey.html)",  # 测试按钮配置
-            "next_step": "mbti_step2",  # 下一步骤标识
-            "current_mbti_step": current_step  # 当前MBTI步骤
+            "request_id": request_id,  # request_id 赋值给字典的request_id键，作为请求标识符
+            "user_id": user_id,  # user_id 赋值给字典的user_id键，作为用户标识符
+            "success": True,  # success 设置为True，表示处理成功
+            "step": "mbti_step1",  # step 设置为字符串"mbti_step1"，标识当前步骤
+            "message": "First, please complete the following scenario test so that we can better understand you. Please use the link below to access the test questions page.",  # message 赋值英文预设提示信息
+            "button_config": "[Take Test](mbti_survey.html)",  # button_config 设置为测试链接配置，指向mbti_survey.html页面
+            "next_step": "mbti_step2",  # next_step 设置为字符串"mbti_step2"，表示下一步骤标识
+            "current_mbti_step": current_step  # current_mbti_step 赋值当前步骤编号1
         }
     else:
-        # 异常情况，不应该到达这里
+        # current_step 不等于1时表示异常情况，不应该到达此分支
+        # 返回包含错误信息的字典，标识处理失败和异常步骤
         return {
-            "request_id": request_id,  # 请求唯一标识符
-            "user_id": user_id,  # 用户标识符
-            "success": False,  # 处理失败标志
-            "step": "error",  # 错误步骤标识
-            "message": f"Unexpected step in _handle_mbti_step_jump: {current_step}",  # 错误消息
-            "error_code": "UNEXPECTED_STEP"  # 错误码
+            "request_id": request_id,  # request_id 赋值给字典的request_id键，保持请求标识符
+            "user_id": user_id,  # user_id 赋值给字典的user_id键，保持用户标识符
+            "success": False,  # success 设置为False，表示处理失败
+            "step": "error",  # step 设置为字符串"error"，标识错误步骤
+            "message": f"Unexpected step in _handle_mbti_step_jump: {current_step}",  # message 赋值格式化字符串，包含异常步骤信息
+            "error_code": "UNEXPECTED_STEP"  # error_code 设置为字符串"UNEXPECTED_STEP"，标识错误类型
         }

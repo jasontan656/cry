@@ -1,21 +1,21 @@
 """
 orchestrate.py - Career Bot 系统主入口文件
-职责：接收各个模块和前端的请求，中转到内部router处理
+职责：接收各个模块和前端的请求，中转到内部router路由处理
 """
 
 # 从当前目录导入 router 模块的 orchestrate_entry 函数
-# 作为统一的请求处理入口，所有业务逻辑判断都在 router 中完成
+# 作为统一的请求处理入口，所有路由逻辑都在 router 中完成
 from orchestrate.router import orchestrate_entry
 
 
 async def run(request):
     """
     模块统一入口函数，供外部系统调用
-    纯粹的中转职责，直接将请求转发给 router 处理
-    
+    纯粹的中转职责，直接将请求转发给 router 路由处理
+
     参数：
         request: 包含intent和其他数据的请求字典
-    
+
     返回：
         响应结果字典
     """
