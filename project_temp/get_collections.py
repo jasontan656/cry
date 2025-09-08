@@ -3,7 +3,7 @@
 临时脚本：获取MongoDB中已创建的collection名称
 
 此脚本用于连接到MongoDB数据库，获取所有已存在的collection名称，
-并将结果打印输出，以便后续硬编码到database.py中。
+并将结果打印输出，以便后续硬编码到mongodb_connector.py中。
 """
 
 from pymongo import MongoClient
@@ -19,7 +19,7 @@ def get_collections():
         dict: 包含collection名称和统计信息的字典
     """
     try:
-        # 连接到MongoDB，使用与database.py相同的配置
+        # 连接到MongoDB，使用与mongodb_connector.py相同的配置
         connection_string = "mongodb://localhost:27017/"
         database_name = "careerbot_mongodb"
 

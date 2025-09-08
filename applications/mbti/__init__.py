@@ -128,7 +128,7 @@ def _get_dynamic_module_info():
         "orchestrate_info": {  # 编排信息字典
             # "supported_intents" 键赋值为具体的意图字符串列表
             # 包含mbti_step1到mbti_step5的完整意图标识，以及数据库查询和模块编排相关的intent，匹配router.py和step1.py中的实际处理逻辑
-            "supported_intents": ["mbti_step1", "mbti_step2", "mbti_step3", "mbti_step4", "mbti_step5", "database_query", "orchestrate_next_module"],
+            "supported_intents": ["mbti_step1", "mbti_step2", "mbti_step3", "mbti_step4", "mbti_step5", "mongodb_connector_query", "orchestrate_next_module"],
             "step_flow": {  # 步骤流程定义字典
                 # "step1" 键赋值为包含next和description的字典，表示初始MBTI测试引导
                 "step1": {"next": "step2", "description": "初始MBTI测试引导"},
@@ -146,8 +146,8 @@ def _get_dynamic_module_info():
                 # 指向applications.mbti.router模块的process方法
                 "step_orchestrate": "applications.mbti.router.process",
                 # "result_storage" 键赋值为存储函数的完整路径字符串
-                # 指向orchestrate模块的database存储功能
-                "result_storage": "orchestrate.database.save_mbti_result"
+                # 指向orchestrate模块的mongodb_connector存储功能
+                "result_storage": "orchestrate.mongodb_connector.save_mbti_result"
             },
             "field_mappings": {  # 字段映射信息字典（动态获取）
                 # "request_fields" 键通过get_request_fields()调用获取请求字段列表
@@ -165,7 +165,7 @@ def _get_dynamic_module_info():
         # 包含强依赖、间接强依赖和请求入口模块
         # time.py 作为强依赖，提供uuid+时间戳封包工具
         # orchestrate 作为强依赖，提供中枢路由和模块间通信能力
-        # database 作为间接强依赖，提供用户状态读取和任务断点续传功能
+        # mongodb_connector 作为间接强依赖，提供用户状态读取和任务断点续传功能
         # frontend 和 entry 作为请求入口模块，提供intent请求的传入途径
         "dependencies": [
             # time.py 模块被列为强依赖项
@@ -174,10 +174,10 @@ def _get_dynamic_module_info():
             # orchestrate 模块被列为强依赖项
             # 没有orchestrate中枢时模块无法激活使用和与其他模块通信
             "orchestrate",
-            # database 模块被列为间接强依赖项
-            # 没有database时无法读取用户状态进行断点续传
+            # mongodb_connector 模块被列为间接强依赖项
+            # 没有mongodb_connector时无法读取用户状态进行断点续传
             # 会导致MBTI测试总是从第一步开始
-            "database",
+            "mongodb_connector",
             # frontend 模块被列为请求入口依赖项
             # 前端模块负责触发intent请求的界面交互
             # 没有frontend时用户无法发起MBTI测试请求

@@ -17,9 +17,9 @@ sys.path.insert(0, parent_dir)
 # Time 通过绝对导入路径utilities.time.Time获取，用于生成带时间戳的request ID
 from utilities.time import Time
 
-# DatabaseOperations 通过绝对导入路径utilities.database.DatabaseOperations获取
+# DatabaseOperations 通过绝对导入路径utilities.mongodb_connector.DatabaseOperations获取
 # 用于执行数据库写入操作，设置用户MBTI测试状态
-from utilities.database import DatabaseOperations
+from utilities.mongodb_connector import DatabaseOperations
 
 
 

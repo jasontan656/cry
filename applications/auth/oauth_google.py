@@ -112,6 +112,14 @@ def login_with_google(code: str, state: str, expected_state: str = None) -> User
         # 创建新用户，传入用户名（邮箱）username、邮箱 email 和虚拟密码 dummy_password
         # 得到新创建用户的 user_id
         user_id = create_user(username, email, dummy_password)
+
+        # 为新创建的OAuth用户绑定Google账户信息
+        # Google ID存储到user_status集合中
+        try:
+            link_oauth_to_existing_email(email, "google", google_id)
+        except ValueError:
+            # 绑定失败，忽略错误继续登录
+            pass
     else:
         # 如果用户已存在，需要检查是否需要绑定OAuth账户
         from .repository import get_user_by_username, link_oauth_to_existing_email

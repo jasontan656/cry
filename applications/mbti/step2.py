@@ -344,8 +344,8 @@ async def process(request: Dict[str, Union[str, int, bool, None]]) -> Dict[str, 
 
         # try 块开始尝试执行数据库存储操作，捕获可能的异常
         try:
-            # 通过 await _call_database() 调用异步数据库函数，传入 request 和 mbti_result 参数
-            await _call_database(request, mbti_result)
+            # 通过 await _call_mongodb_connector() 调用异步mongodb_connector函数，传入 request 和 mbti_result 参数
+            await _call_mongodb_connector(request, mbti_result)
         # except 捕获 Exception 异常，当数据库调用失败时执行
         except Exception as db_error:
             # 通过 print() 输出数据库调用失败信息，但不影响主流程继续执行
@@ -395,11 +395,11 @@ async def process(request: Dict[str, Union[str, int, bool, None]]) -> Dict[str, 
         }
 
 
-# _call_database 函数定义为异步私有函数，接收 request 和 mbti_result 参数，通过 -> None 不返回任何值
-async def _call_database(request: Dict[str, Union[str, int, bool, None]], mbti_result: MBTIResult) -> None:
+# _call_mongodb_connector 函数定义为异步私有函数，接收 request 和 mbti_result 参数，通过 -> None 不返回任何值
+async def _call_mongodb_connector(request: Dict[str, Union[str, int, bool, None]], mbti_result: MBTIResult) -> None:
     """
-    调用数据库代理写入MBTI测试结果（占位符）
-    数据库结构待定，目前仅记录调用
+    调用mongodb_connector代理写入MBTI测试结果（占位符）
+    mongodb_connector结构待定，目前仅记录调用
     """
     # TODO: 实现数据库代理调用
     # 预期数据结构：
@@ -412,11 +412,11 @@ async def _call_database(request: Dict[str, Union[str, int, bool, None]], mbti_r
     #     "timestamp": datetime.now()
     # }
 
-    # 通过 print() 输出格式化字符串，记录数据库代理被调用但不执行实际写入操作
-    print(f"Database agent called for user {request.get('user_id')} with MBTI type {mbti_result['mbti_type']}")
+    # 通过 print() 输出格式化字符串，记录mongodb_connector代理被调用但不执行实际写入操作
+    print(f"MongoDB connector agent called for user {request.get('user_id')} with MBTI type {mbti_result['mbti_type']}")
 
     # TODO: 替换为实际的数据库代理调用代码
-    # 例如：await database.save_mbti_result(request, mbti_result)
+    # 例如：await mongodb_connector.save_mbti_result(request, mbti_result)
     # 目前处于开发阶段，数据库未配置，暂时使用 pass 占位
 
     # pass 语句表示函数体为空，占位符作用

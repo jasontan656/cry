@@ -43,16 +43,16 @@ class UserData(BaseModel):
     """
     用户数据模型（内部使用）
 
-    定义存储到数据库的用户完整信息结构：
+    定义存储到user_profiles的用户静态画像信息结构：
     - user_id: 用户唯一标识符，字符串类型
     - username: 用户名（使用邮箱作为用户名），字符串类型
     - email: 邮箱地址，字符串类型
-    - hashed_password: 加密后的密码，字符串类型
+    
+    注：动态状态字段（hashed_password、oauth_*_id等）现在存储在user_status集合中
     """
     user_id: str
     username: str  # 使用邮箱作为用户名
     email: str
-    hashed_password: str
 
 
 class SendVerificationRequest(BaseModel):
@@ -203,6 +203,22 @@ class UserProfileResponse(BaseModel):
     username: str
     created_at: str = None
     updated_at: str = None
+
+
+class UserStatusData(BaseModel):
+    """
+    用户状态数据模型（内部使用）
+    
+    定义存储到user_status的用户动态状态信息结构：
+    - user_id: 用户唯一标识符，字符串类型
+    - hashed_password: 加密后的密码，字符串类型（可选）
+    - oauth_google_id: Google OAuth绑定ID，字符串类型（可选）
+    - oauth_facebook_id: Facebook OAuth绑定ID，字符串类型（可选）
+    """
+    user_id: str
+    hashed_password: str = None
+    oauth_google_id: str = None
+    oauth_facebook_id: str = None
 
 
 class UserSettingsUpdateRequest(BaseModel):

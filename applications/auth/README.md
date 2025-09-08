@@ -1,6 +1,6 @@
 # 用户认证模块 (Auth Module)
 
-本模块实现用户注册功能，使用Pydantic进行数据建模，通过调用`utilities/database.py`进行数据库操作。
+本模块实现用户注册功能，使用Pydantic进行数据建模，通过调用`utilities/mongodb_connector.py`进行数据库操作。
 
 ## 功能特性
 
@@ -202,6 +202,6 @@ python -m applications.auth.test_register
 
 1. 密码使用bcrypt进行不可逆加密
 2. 用户ID使用UUID自动生成
-3. 所有数据库操作通过`utilities/database.py`完成
+3. 所有数据库操作通过`utilities/mongodb_connector.py`完成
 4. 输入验证在注册流程早期执行
 5. 异常信息不包含敏感数据

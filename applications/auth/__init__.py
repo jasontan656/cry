@@ -77,9 +77,9 @@ def _get_dynamic_module_info():
         },
         # "dependencies" 键赋值包含模块依赖关系的列表
         "dependencies": [
-            # database 模块被列为强依赖项
-            # 没有database时无法存储和查询用户信息
-            "database",
+            # mongodb_connector 模块被列为强依赖项
+            # 没有mongodb_connector时无法存储和查询用户信息
+            "mongodb_connector",
             # mail 模块被列为强依赖项
             # 没有mail时无法发送邮箱验证码
             "mail"
