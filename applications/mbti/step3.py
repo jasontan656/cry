@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-step3.py - MBTI反向能力测试表单生成器
+step3.py - MBTI反向能力测试表单生成器（流程驱动版本）
 """
 
 # import 语句通过 json 模块名导入用于JSON数据读取和解析操作
@@ -12,16 +12,19 @@ import os
 import re
 # import 语句通过 sys 模块名导入用于路径操作
 import sys
-# from...import 语句通过 typing 模块导入类型提示工具，使用精确类型定义
-from typing import Dict, List, Union, Optional
+# from...import 语句通过 typing 模块导入类型提示工具，使用精确类型定义和Any类型
+from typing import Dict, List, Union, Optional, Any
 
-# 添加上级目录到Python路径，以便导入utilities模块
+# 添加上级目录到Python路径，以便导入utilities和hub模块
 parent_dir = os.path.dirname(os.path.dirname(__file__))
 sys.path.insert(0, parent_dir)
 
 # 从utilities模块导入Time类，用于生成带时间戳的request ID
 # 使用绝对导入路径utilities.time.Time确保跨环境兼容性
 from utilities.time import Time
+
+# 导入流程状态管理模块
+from hub.status import UserFlowState, user_status_manager
 
 
 def is_valid_request_id(request_id_string: str) -> bool:

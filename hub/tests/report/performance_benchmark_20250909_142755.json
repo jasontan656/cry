@@ -1,0 +1,51 @@
+{
+  "sync_benchmark": {
+    "total_requests": 10,
+    "successful_requests": 10,
+    "avg_time_ms": 1.13,
+    "p95_ms": 1.43,
+    "error_count": 0
+  },
+  "async_benchmark": {
+    "total_requests": 10,
+    "successful_requests": 10,
+    "avg_time_ms": 1.57,
+    "p95_ms": 2.03,
+    "error_count": 0
+  },
+  "concurrent_benchmark": {
+    "test_config": {
+      "concurrent_workers": 8,
+      "total_requests": 40,
+      "batch_size": 5,
+      "total_batches": 8
+    },
+    "overall_stats": {
+      "total_requests": 40,
+      "successful_requests": 40,
+      "failed_requests": 0,
+      "success_rate": 100.0,
+      "total_time_seconds": 0.047,
+      "requests_per_second": 849.55
+    },
+    "timing_stats": {
+      "avg_time_ms": 4.08,
+      "min_time_ms": 2.87,
+      "max_time_ms": 7.31,
+      "p50_ms": 3.85,
+      "p90_ms": 5.69,
+      "p95_ms": 6.6
+    },
+    "server_timing": {
+      "server_times_available": 0,
+      "avg_server_time_ms": null
+    },
+    "error_analysis": {
+      "timeout_errors": 0,
+      "connect_errors": 0,
+      "other_errors": 0
+    }
+  },
+  "test_timestamp": 1757399275.762197,
+  "curl_baseline_reference": 210.0
+}

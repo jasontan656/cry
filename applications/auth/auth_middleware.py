@@ -1,17 +1,9 @@
-# JWT认证中间件模块
-# 实现FastAPI依赖项，用于保护需要登录才能访问的路由
+# 认证工具模块
+# 提供意图驱动架构下的认证工具函数和用户数据模型
 
-from fastapi import Depends, HTTPException, status
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from typing import Dict, Any, Optional
 from .tokens import verify_access_token
 from .repository import get_user_by_username
-
-
-# HTTPBearer() 通过调用创建Bearer令牌安全方案实例
-# auto_error参数设置为True，当缺少令牌时自动抛出401错误
-# 赋值给 security 变量，用于从请求头提取Bearer令牌
-security = HTTPBearer(auto_error=True)
 
 
 class AuthenticatedUser:
@@ -44,38 +36,19 @@ class AuthenticatedUser:
         }
 
 
-async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)) -> AuthenticatedUser:
+def extract_auth_info_from_token(token: str) -> Optional[AuthenticatedUser]:
     """
-    获取当前认证用户的FastAPI依赖项
+    从JWT令牌中提取认证信息
     
-    从HTTP Authorization头部提取Bearer令牌，验证其有效性，
-    并返回当前用户的信息。用于保护需要登录的路由。
+    验证令牌有效性并返回认证用户对象，用于意图驱动架构下的认证检查。
     
     参数:
-        credentials: FastAPI自动注入的HTTP认证凭据对象
+        token: JWT令牌字符串
     
     返回:
-        AuthenticatedUser: 已认证的用户信息对象
-    
-    异常:
-        HTTPException: 令牌无效、过期或用户不存在时抛出401错误
+        AuthenticatedUser或None: 认证成功返回用户对象，否则返回None
     """
-    # credentials_exception 通过 HTTPException() 创建认证异常对象
-    # status_code 参数设置为 401 表示未认证错误
-    # detail 参数设置为错误信息字符串
-    # headers 参数设置为包含认证方式的字典
-    # 赋值给 credentials_exception 变量，用于令牌验证失败时抛出
-    credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
-    
     try:
-        # credentials.credentials 通过属性访问获取Bearer令牌字符串
-        # 赋值给 token 变量存储待验证的JWT令牌
-        token = credentials.credentials
-        
         # verify_access_token() 通过调用验证JWT令牌有效性
         # 传入令牌字符串，返回解码后的载荷数据字典
         # 赋值给 payload 变量存储令牌载荷信息
@@ -98,8 +71,7 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
         
         # if 条件判断检查必要字段是否存在且令牌类型正确
         if not user_id or not username or token_type != "access_token":
-            # raise 语句抛出认证异常
-            raise credentials_exception
+            return None
         
         # get_user_by_username() 通过调用从数据库获取用户完整信息
         # 传入用户名，返回用户数据字典或空字典
@@ -108,8 +80,7 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
         
         # if 条件判断检查用户是否存在于数据库中
         if not user_data:
-            # raise 语句抛出认证异常，表示用户不存在
-            raise credentials_exception
+            return None
         
         # user_data.get() 通过调用提取用户邮箱字段
         # 传入 "email" 键名，返回邮箱字符串
@@ -125,87 +96,130 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
             email=email
         )
     
-    except ValueError:
-        # ValueError异常处理，当JWT解码失败时抛出认证异常
-        raise credentials_exception
-    
-    except Exception:
-        # 通用异常处理，当其他错误发生时抛出认证异常
-        raise credentials_exception
-
-
-def get_optional_user(credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)) -> Optional[AuthenticatedUser]:
-    """
-    获取可选用户的FastAPI依赖项
-    
-    类似于get_current_user，但允许令牌为空。
-    用于某些既支持匿名访问又支持登录访问的路由。
-    
-    参数:
-        credentials: FastAPI自动注入的HTTP认证凭据对象，可能为None
-    
-    返回:
-        AuthenticatedUser或None: 已认证的用户信息对象，如果未认证则返回None
-    """
-    # if 条件判断检查认证凭据是否存在
-    if not credentials:
-        # return 语句返回None表示未认证状态
-        return None
-    
-    try:
-        # credentials.credentials 通过属性访问获取Bearer令牌字符串
-        # 赋值给 token 变量存储待验证的JWT令牌
-        token = credentials.credentials
-        
-        # verify_access_token() 通过调用验证JWT令牌有效性
-        # 传入令牌字符串，返回解码后的载荷数据字典
-        # 赋值给 payload 变量存储令牌载荷信息
-        payload = verify_access_token(token)
-        
-        # payload.get() 通过调用提取用户ID字段
-        # 传入 "user_id" 键名，返回用户ID字符串或None
-        # 赋值给 user_id 变量存储用户标识符
-        user_id = payload.get("user_id")
-        
-        # payload.get() 通过调用提取用户名字段
-        # 传入 "username" 键名，返回用户名字符串或None
-        # 赋值给 username 变量存储用户名
-        username = payload.get("username")
-        
-        # payload.get() 通过调用提取令牌类型字段
-        # 传入 "type" 键名，返回令牌类型字符串或None
-        # 赋值给 token_type 变量存储令牌类型
-        token_type = payload.get("type")
-        
-        # if 条件判断检查必要字段是否存在且令牌类型正确
-        if not user_id or not username or token_type != "access_token":
-            # return 语句返回None表示令牌无效
-            return None
-        
-        # get_user_by_username() 通过调用从数据库获取用户完整信息
-        # 传入用户名，返回用户数据字典或空字典
-        # 赋值给 user_data 变量存储用户数据
-        user_data = get_user_by_username(username)
-        
-        # if 条件判断检查用户是否存在于数据库中
-        if not user_data:
-            # return 语句返回None表示用户不存在
-            return None
-        
-        # user_data.get() 通过调用提取用户邮箱字段
-        # 传入 "email" 键名，返回邮箱字符串，默认使用用户名
-        # 赋值给 email 变量存储用户邮箱地址
-        email = user_data.get("email", username)
-        
-        # AuthenticatedUser() 通过调用创建认证用户对象
-        # 传入用户ID、用户名和邮箱参数
-        # 返回包含用户信息的认证对象
-        return AuthenticatedUser(
-            user_id=user_id,
-            username=username,
-            email=email
-        )
-    
     except (ValueError, Exception):
         # 异常处理，当JWT解码失败或其他错误发生时返回None
         return None
+
+
+def extract_auth_info_from_payload(payload: Dict[str, Any]) -> Optional[AuthenticatedUser]:
+    """
+    从意图载荷中提取认证信息
+    
+    支持从payload的Authorization头部或access_token字段提取令牌并验证。
+    
+    参数:
+        payload: 意图载荷字典，可能包含认证令牌
+    
+    返回:
+        AuthenticatedUser对象或None: 认证成功返回用户对象，否则返回None
+    """
+    try:
+        # 从payload中提取Authorization头部或access_token字段
+        auth_header = payload.get("Authorization") or payload.get("access_token")
+        
+        if not auth_header:
+            return None
+            
+        # 处理Bearer令牌格式
+        if auth_header.startswith("Bearer "):
+            token = auth_header[7:]  # 跳过"Bearer "前缀
+        else:
+            token = auth_header
+        
+        # 调用令牌验证函数
+        return extract_auth_info_from_token(token)
+        
+    except Exception:
+        return None
+
+
+def extract_auth_info_from_context(context: Dict[str, Any]) -> Optional[AuthenticatedUser]:
+    """
+    从意图上下文中提取认证信息
+    
+    支持从context中直接提取已验证的用户认证信息。
+    
+    参数:
+        context: 意图上下文字典，可能包含用户认证信息
+    
+    返回:
+        AuthenticatedUser对象或None: 认证信息存在返回用户对象，否则返回None
+    """
+    try:
+        # 检查context中是否有认证标识
+        if not context.get("authenticated", False):
+            return None
+        
+        # 从context中提取用户信息
+        user_id = context.get("user_id")
+        username = context.get("username")
+        email = context.get("email")
+        
+        # 验证必要字段
+        if not user_id or not username:
+            return None
+        
+        # 创建认证用户对象
+        return AuthenticatedUser(
+            user_id=user_id,
+            username=username,
+            email=email or username
+        )
+        
+    except Exception:
+        return None
+
+
+def create_authenticated_user(user_data: Dict[str, Any]) -> AuthenticatedUser:
+    """
+    从用户数据字典创建认证用户对象
+    
+    参数:
+        user_data: 包含用户信息的字典
+    
+    返回:
+        AuthenticatedUser: 认证用户对象
+    
+    异常:
+        KeyError: 缺少必要的用户信息字段
+    """
+    # 从用户数据中提取必要字段
+    user_id = user_data["user_id"]
+    username = user_data.get("username") or user_data.get("email")
+    email = user_data.get("email") or username
+    
+    # 创建并返回认证用户对象
+    return AuthenticatedUser(
+        user_id=user_id,
+        username=username,
+        email=email
+    )
+
+
+def validate_user_authentication(user: Optional[AuthenticatedUser]) -> bool:
+    """
+    验证用户认证状态
+    
+    参数:
+        user: 可选的认证用户对象
+    
+    返回:
+        bool: 用户已认证返回True，否则返回False
+    """
+    return user is not None and user.user_id and user.username
+
+
+# 导出主要类和函数
+__all__ = [
+    # 认证用户数据模型
+    "AuthenticatedUser",
+    
+    # 认证信息提取工具函数
+    "extract_auth_info_from_token",
+    "extract_auth_info_from_payload", 
+    "extract_auth_info_from_context",
+    
+    # 认证用户创建和验证工具
+    "create_authenticated_user",
+    "validate_user_authentication"
+]

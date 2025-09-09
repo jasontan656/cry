@@ -3,7 +3,8 @@
 # 通过 coding 声明设置文件编码为 utf-8 以支持中文字符处理
 # -*- coding: utf-8 -*-
 """
-step2.py - MBTI测试结果处理器  # 处理测试结果，计算类型，输出分析
+step2.py - MBTI测试结果处理器（流程驱动版本）
+处理测试结果，计算类型，输出分析，按照hub/flow_example.py标准实现流程上下文支持
 """
 
 # 通过 import 导入 json 模块，用于后续文件读取和数据解析操作
@@ -14,18 +15,21 @@ import os
 import re
 # 通过 import 导入 sys 模块，用于路径操作
 import sys
-# 通过 from...import 导入 typing 模块的类型提示工具，使用精确类型定义
-from typing import Dict, List, TypedDict, Union, Optional
+# 通过 from...import 导入 typing 模块的类型提示工具，使用精确类型定义和Any类型
+from typing import Dict, List, TypedDict, Union, Optional, Any
 # 通过 import 导入 step3 模块，用于在step2完成后触发step3进一步测试
 from applications.mbti import step3
 
-# 添加上级目录到Python路径，以便导入utilities模块
+# 添加上级目录到Python路径，以便导入utilities和hub模块
 parent_dir = os.path.dirname(os.path.dirname(__file__))
 sys.path.insert(0, parent_dir)
 
 # 从utilities模块导入Time类，用于生成带时间戳的request ID
 # 使用绝对导入路径utilities.time.Time确保跨环境兼容性
 from utilities.time import Time
+
+# 导入流程状态管理模块
+from hub.status import UserFlowState, user_status_manager
 
 
 def is_valid_request_id(request_id_string: str) -> bool:
@@ -297,10 +301,10 @@ def load_output_templates() -> Dict[str, str]:
 
 
 # process 函数定义为异步函数，接收 request 参数（Dict[str, Union[str, int, bool, None]]类型），通过 -> Dict[str, Union[str, bool, int]] 返回处理结果字典
-async def process(request: Dict[str, Union[str, int, bool, None]]) -> Dict[str, Union[str, bool, int]]:
+async def process(request: Dict[str, Any]) -> Dict[str, Any]:
     """
-    处理用户测试结果，计算MBTI类型，输出分析结果
-    调用数据库代理写入数据（占位符）
+    处理用户测试结果，计算MBTI类型，输出分析结果（流程驱动版本）
+    支持流程上下文字段并整合状态管理功能
     """
     # try 块开始尝试执行主要处理逻辑，捕获可能的异常
     try:
@@ -312,7 +316,15 @@ async def process(request: Dict[str, Union[str, int, bool, None]]) -> Dict[str, 
         user_responses = request.get("responses", {})
         # user_id 通过 request.get("user_id") 获取用户ID，赋值给变量
         user_id = request.get("user_id")
+        # flow_id 通过 request.get("flow_id") 获取流程ID，默认值为标准MBTI流程ID
+        flow_id = request.get("flow_id", "mbti_personality_test")
 
+        # === 获取用户流程状态快照 ===
+        
+        # user_status_manager.get_flow_snapshot 通过调用获取用户流程快照
+        # 传入user_id和flow_id参数，返回完整的状态信息
+        user_snapshot = await user_status_manager.get_flow_snapshot(user_id, flow_id)
+        
         # scorer 通过 MBTIScorer() 创建MBTI评分器实例，赋值给变量
         scorer = MBTIScorer()
         # mbti_result 通过 scorer.calculate_scores() 调用计算方法，传入 user_responses 参数，获取MBTI计算结果
@@ -326,12 +338,38 @@ async def process(request: Dict[str, Union[str, int, bool, None]]) -> Dict[str, 
         # analysis_text 通过 output_templates.get(mbti_type, "类型分析模板未找到") 获取对应类型的分析文本
         analysis_text = output_templates.get(mbti_type, "类型分析模板未找到")
 
-        # response 通过字典创建，构建返回给前端的完整响应结构
+        # === 更新用户流程状态 ===
+        
+        # Time.timestamp() 通过调用Time类timestamp方法生成更新时间戳
+        updated_at = Time.timestamp()
+        
+        # 如果用户状态存在，更新当前步骤和输出快照
+        if user_snapshot.get("exists"):
+            # 获取现有的用户状态
+            current_state = user_snapshot
+            # 更新步骤历史、当前步骤和输出快照
+            if "mbti_step2" not in current_state.get("step_history", []):
+                current_state.setdefault("step_history", []).append("mbti_step2")
+            
+            current_state["last_completed_step"] = "mbti_step2"
+            current_state["current_step"] = "mbti_step2"
+            current_state["updated_at"] = updated_at
+            current_state.setdefault("output_snapshot", {})["mbti_step2"] = {
+                "mbti_result": mbti_result,
+                "analysis": analysis_text
+            }
+            
+            # user_status_manager.update_flow_state 通过调用更新流程状态
+            await user_status_manager.update_flow_state(user_id, flow_id, current_state)
+
+        # response 通过字典创建，构建返回给前端的完整响应结构，包含流程上下文字段
         response = {
             # "request_id" 键通过 request.get("request_id") 获取请求ID
             "request_id": request.get("request_id"),
             # "user_id" 键赋值为 user_id 变量
             "user_id": user_id,
+            # "flow_id" 键赋值为 flow_id 变量，包含流程上下文
+            "flow_id": flow_id,
             # "success" 键设为 True，表示处理成功
             "success": True,
             # "step" 键设为 "mbti_step2"，表示当前步骤
@@ -353,12 +391,14 @@ async def process(request: Dict[str, Union[str, int, bool, None]]) -> Dict[str, 
 
         # try 块开始尝试触发step3进一步测试，捕获可能的异常
         try:
-            # step3_request 通过字典创建，构造传递给step3的请求参数
+            # step3_request 通过字典创建，构造传递给step3的请求参数，包含流程上下文
             step3_request = {
                 # "request_id" 键通过 request.get("request_id") 获取原始请求ID
                 "request_id": request.get("request_id"),
                 # "user_id" 键赋值为 user_id 变量，传递用户标识
                 "user_id": user_id,
+                # "flow_id" 键赋值为 flow_id 变量，传递流程上下文
+                "flow_id": flow_id,
                 # "intent" 键设为 "mbti_step3" 字符串，指定下一步骤意图
                 "intent": "mbti_step3",
                 # "mbti_result" 键赋值为 mbti_result 字典，传递step2的MBTI计算结果
@@ -380,12 +420,14 @@ async def process(request: Dict[str, Union[str, int, bool, None]]) -> Dict[str, 
 
     # except 捕获 Exception 异常，当系统异常发生时执行
     except Exception as e:
-        # 通过 return 返回包含异常信息的错误响应字典
+        # 通过 return 返回包含异常信息的错误响应字典，包含流程上下文字段
         return {
             # "request_id" 键通过 request.get("request_id") 获取请求ID
             "request_id": request.get("request_id"),
             # "user_id" 键通过 request.get("user_id") 获取用户ID
             "user_id": request.get("user_id"),
+            # "flow_id" 键通过 request.get("flow_id", "mbti_personality_test") 获取流程ID
+            "flow_id": request.get("flow_id", "mbti_personality_test"),
             # "success" 键设为 False，表示处理失败
             "success": False,
             # "step" 键设为 "mbti_step2"，表示当前步骤

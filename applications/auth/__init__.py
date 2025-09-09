@@ -1,4 +1,4 @@
-# __init__.py - Auth模块热插拔接口定义
+# __init__.py - Auth模块意图驱动架构接口定义
 # sys 通过 import 导入系统模块，用于路径操作
 import sys
 # os 通过 import 导入操作系统接口模块，用于文件路径处理
@@ -10,23 +10,20 @@ parent_dir = os.path.dirname(os.path.dirname(__file__))
 # 传入索引0和parent_dir参数，确保上级目录优先被搜索
 sys.path.insert(0, parent_dir)
 
-# from applications.auth.register import 导入注册相关函数
-from applications.auth.register import register_user
-# from applications.auth.login import login_user 导入用户登录函数
-from applications.auth.login import login_user
-# from applications.auth.schemas import 导入核心数据模型
-from applications.auth.schemas import UserRegisterRequest, UserResponse
-# from applications.auth.router import ROUTES 导入路由映射
-from applications.auth.router import ROUTES
-# from applications.auth.exceptions import 导入核心异常类
-from applications.auth.exceptions import UserAlreadyExistsError, InvalidCredentialsError
+# 彻底重构：导入流程驱动系统组件
+# 导入响应格式工具，保持兼容性
+from applications.auth.intent_handlers import create_success_response, create_error_response
+# 导入流程注册函数，用于向Hub系统自主注册
+from applications.auth.intent_registration import auth_register_function
+# 导入流程注册函数，用于向flow_registry注册认证流程
+from applications.auth.flow_definitions import register_auth_flows
 
-# 导入orchestrate注册中心，用于模块主动注册
+# 导入hub注册中心，用于模块主动注册
 try:
-    from orchestrate.router import router
-    ORCHESTRATE_AVAILABLE = True
+    from hub.router import router
+    HUB_AVAILABLE = True
 except ImportError:
-    ORCHESTRATE_AVAILABLE = False
+    HUB_AVAILABLE = False
 
 # def _get_dynamic_module_info() 定义动态生成模块元信息的函数
 # 函数不接收参数，返回包含动态字段信息的模块信息字典
@@ -43,45 +40,76 @@ def _get_dynamic_module_info():
         "version": "1.0.0",
         # "description" 键赋值为模块功能描述字符串
         "description": "用户认证中心模块，支持邮箱注册登录、第三方OAuth、邮箱验证码验证",
-        "interface": {  # 对外暴露的接口字典
-            # "register_user" 键赋值为之前导入的register_user函数引用
-            "register_user": register_user,
-            # "login_user" 键赋值为之前导入的login_user函数引用
-            "login_user": login_user,
-            # "router" 键赋值为之前导入的ROUTES路由映射字典
-            "router": ROUTES
-        },
-        "capabilities": {  # 模块能力声明字典
-            "email_authentication": {  # 邮箱认证能力字典
-                # "methods" 键赋值为支持的认证方法列表
-                "methods": ["register", "login", "email_verification"],
-                # "description" 键赋值为详细的功能描述字符串
-                "description": "完整的邮箱认证流程，包括注册、登录、验证码验证"
+        "interface": {  # 流程驱动架构接口字典
+            # 现代化架构：完全基于流程注册机制
+            # "response_formatters" 键赋值为标准响应格式化工具
+            "response_formatters": {
+                "create_success_response": create_success_response,
+                "create_error_response": create_error_response
             },
-            "oauth_integration": {  # OAuth集成能力字典
-                # "providers" 键赋值为支持的OAuth提供商列表
-                "providers": ["google", "facebook"],
-                # "description" 键赋值为OAuth集成功能描述字符串
-                "description": "支持Google和Facebook第三方OAuth登录"
+            # "architecture_type" 键标识流程驱动架构
+            "architecture_type": "flow_driven"
+        },
+        "capabilities": {  # 流程驱动能力声明字典
+            "flow_processing": {  # 流程处理能力字典
+                # "supported_flows" 键赋值为支持的流程总数
+                "supported_flows": 4,
+                # "flow_categories" 键赋值为流程分类列表
+                "flow_categories": ["user_registration", "oauth_authentication", "password_reset", "protected_operations"],
+                # "description" 键赋值为流程处理能力描述
+                "description": "完整的用户认证流程处理系统，支持注册、OAuth、密码重置和受保护功能流程"
+            },
+            "flow_management": {  # 流程管理能力字典
+                # "supported_flows" 键赋值为支持的流程列表
+                "supported_flows": ["user_registration", "oauth_authentication", "password_reset"],
+                # "flow_state_tracking" 键标识支持流程状态追踪
+                "flow_state_tracking": True,
+                # "description" 键赋值为流程管理能力描述
+                "description": "支持多步骤认证流程状态管理和恢复"
             }
         },
-        "orchestrate_info": {  # 编排信息字典
-            # "supported_intents" 键赋值为具体的意图字符串列表
-            "supported_intents": ["auth_register", "auth_login"],
-            "route_mappings": {  # 路由映射定义字典
-                # "/auth/register" 键赋值为注册路由处理函数
-                "/auth/register": "handle_register_request",
-                # "/auth/login" 键赋值为登录路由处理函数
-                "/auth/login": "handle_login_request"
+        "hub_info": {  # 流程驱动编排信息字典
+            # "supported_flows" 键赋值为完整的流程字符串列表
+            "supported_flows": [
+                "user_registration", "oauth_google_authentication", 
+                "oauth_facebook_authentication", "password_reset"
+            ],
+            "flow_definitions": {  # 流程定义字典，描述各个流程的步骤
+                # 用户注册流程
+                "user_registration": {
+                    "steps": ["register_step1", "register_step2", "register_step3"],
+                    "description": "邮箱验证注册流程"
+                },
+                # Google OAuth流程
+                "oauth_google_authentication": {
+                    "steps": ["oauth_google_step1", "oauth_google_step2"],
+                    "description": "Google第三方登录流程"
+                },
+                # Facebook OAuth流程
+                "oauth_facebook_authentication": {
+                    "steps": ["oauth_facebook_step1", "oauth_facebook_step2"],
+                    "description": "Facebook第三方登录流程"
+                },
+                # 密码重置流程
+                "password_reset": {
+                    "steps": ["reset_step1", "reset_step2"],
+                    "description": "密码重置流程"
+                }
             }
         },
-        # "dependencies" 键赋值包含模块依赖关系的列表
+        # "register_function" 键赋值为模块自主注册函数
+        # 这是提供给hub注册中心的回调函数，实现完全自主的注册过程
+        "register_function": auth_register_function,
+        # "dependencies" 键赋值包含意图驱动系统依赖关系的列表
         "dependencies": [
-            # mongodb_connector 模块被列为强依赖项
-            # 没有mongodb_connector时无法存储和查询用户信息
+            # hub 模块被列为核心依赖项
+            # 意图驱动架构需要hub进行意图路由和流程管理
+            "hub",
+            # mongodb_connector 模块被列为数据层依赖项
+            # 意图处理器需要数据存储支持
             "mongodb_connector",
-            # mail 模块被列为强依赖项
-            # 没有mail时无法发送邮箱验证码
+            # mail 模块被列为通讯依赖项  
+            # 验证码发送意图需要邮件服务支持
             "mail"
         ],
         "metadata": {  # 模块元数据字典
@@ -89,8 +117,10 @@ def _get_dynamic_module_info():
             "author": "Career Bot Team",
             # "created" 键赋值为创建日期字符串
             "created": "2024-12-19",
-            # "route_count" 键通过len(ROUTES)调用计算路由总数
-            "route_count": len(ROUTES)
+            # "flow_count" 键赋值为支持的流程总数
+            "flow_count": 4,  # auth模块支持的流程数量
+            # "architecture" 键标识架构类型
+            "architecture": "flow_driven"  # 流程驱动架构标识
         }
     }
 
@@ -131,8 +161,8 @@ def initialize_module(config: dict = None):
     # 传入__name__参数，返回logger对象赋值给logger变量
     logger = logging.getLogger(__name__)
     # logger.info 通过调用记录信息级别的日志消息
-    # 传入字符串消息"Auth模块初始化完成"
-    logger.info("Auth模块初始化完成")
+    # 传入字符串消息表明流程驱动架构初始化完成
+    logger.info("Auth模块流程驱动系统初始化完成")
 
     # return 语句返回包含初始化状态的字典
     return {
@@ -152,8 +182,8 @@ def cleanup_module():
     # 传入__name__参数，返回logger对象赋值给logger变量
     logger = logging.getLogger(__name__)
     # logger.info 通过调用记录信息级别的日志消息
-    # 传入字符串消息"Auth模块清理完成"
-    logger.info("Auth模块清理完成")
+    # 传入字符串消息表明流程驱动系统清理完成
+    logger.info("Auth模块流程驱动系统清理完成")
     # return 语句返回包含清理状态的字典
     return {"status": "cleaned"}
 
@@ -179,16 +209,16 @@ def get_capabilities():
     # 不传入参数，返回包含认证和OAuth能力的字典
     return _get_module_info()["capabilities"]
 
-# def register_to_orchestrate() 定义主动注册到中枢的函数
-# 函数不接收参数，执行Auth模块向orchestrate注册中心的主动注册
-def register_to_orchestrate():
+# def register_to_hub() 定义主动注册到中枢的函数
+# 函数不接收参数，执行Auth模块向hub注册中心的主动注册
+def register_to_hub():
     """
-    Auth模块主动向orchestrate注册中心注册
+    Auth模块主动向hub注册中心注册
     实现模块自治的注册机制
     """
-    # 检查orchestrate是否可用
-    if not ORCHESTRATE_AVAILABLE:
-        print("Warning: Orchestrate not available, skipping registration")
+    # 检查hub是否可用
+    if not HUB_AVAILABLE:
+        print("Warning: Hub not available, skipping registration")
         return False
 
     try:
@@ -201,17 +231,25 @@ def register_to_orchestrate():
         # 调用注册中心的register_module方法进行注册
         registry.register_module(module_info)
 
-        print(f"Auth模块成功注册到orchestrate注册中心")
+        print(f"Auth模块流程驱动系统成功注册到hub注册中心")
         return True
 
     except Exception as e:
-        print(f"Auth模块注册失败: {str(e)}")
+        print(f"Auth模块流程驱动系统注册失败: {str(e)}")
         return False
 
-# 模块加载时自动注册到orchestrate
-# 只有在orchestrate可用时才执行注册
-if ORCHESTRATE_AVAILABLE:
-    register_to_orchestrate()
+# 模块加载时自动注册到hub并注册流程
+# 只有在hub可用时才执行注册
+if HUB_AVAILABLE:
+    # 注册模块到hub
+    register_to_hub()
+    
+    # 注册所有认证流程到flow_registry
+    try:
+        register_auth_flows()
+        print("Auth模块所有流程注册成功")
+    except Exception as e:
+        print(f"Auth模块流程注册失败: {str(e)}")
 
 # MODULE_READY 通过赋值True设置模块就绪状态标识
 # 用于向外部系统表示该模块已准备就绪，可以正常使用
