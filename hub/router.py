@@ -300,9 +300,17 @@ class Router:
                     # 清理失败时抛出复合异常，包含原始异常和清理异常信息
                     raise RuntimeError(f"Intent '{intent}' execution failed: {str(e)}. Cleanup also failed: {str(cleanup_error)}")
             
-            # 严格模式：重新抛出原始异常，禁止返回fallback错误响应
-            # 让上层HTTP处理器将异常转换为合适的4xx/5xx状态码
-            raise RuntimeError(f"Intent '{intent}' execution failed in module '{step_definition.module_name}': {str(e)}")
+            # 严格模式：根据异常类型决定是否直接抛出业务异常
+            # 业务异常直接传播到HTTP层，系统异常包装为RuntimeError
+            
+            exception_name = type(e).__name__
+            
+            # 业务异常直接传播，保持异常类型以便main.py正确处理
+            if exception_name in ["InvalidInputError", "InvalidCredentialsError", "EmailAlreadyRegisteredError"]:
+                raise e
+            else:
+                # 系统异常包装为RuntimeError  
+                raise RuntimeError(f"Intent '{intent}' execution failed in module '{step_definition.module_name}': {str(e)}")
 
 
 # router 通过 Router() 创建路由器实例

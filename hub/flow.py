@@ -79,12 +79,31 @@ class FlowDefinition:
 
 class FlowRegistry:
     """
-    FlowRegistry 类作为流程注册中心
+    FlowRegistry 类作为流程注册中心 - 严格单例模式
     负责管理流程定义、步骤映射和跨模块流程协调
+    确保全系统只有一个"中央流程登记簿"实例
     """
+
+    # 单例模式：类级别的实例存储
+    _instance = None
+    _initialized = False
+    
+    def __new__(cls):
+        """
+        __new__ 方法实现严格单例模式
+        确保FlowRegistry在整个系统中只有一个实例
+        """
+        if cls._instance is None:
+            cls._instance = super(FlowRegistry, cls).__new__(cls)
+        return cls._instance
 
     # __init__ 方法初始化FlowRegistry实例的核心数据结构
     def __init__(self):
+        # 单例模式：防止重复初始化
+        if FlowRegistry._initialized:
+            return
+        FlowRegistry._initialized = True
+        
         # flows 初始化为空字典，存储flow_id到FlowDefinition的映射
         self.flows: Dict[str, FlowDefinition] = {}
         # steps 初始化为空字典，存储step_id到FlowStep的映射
@@ -584,6 +603,6 @@ class FlowRegistry:
             }
 
 
-# flow_registry 通过FlowRegistry()创建全局流程注册中心实例
-# 用于整个hub模块的流程管理和步骤协调
+# flow_registry 通过FlowRegistry()获取全局唯一的流程注册中心实例
+# 单例模式确保全系统共享同一个"中央流程登记簿"
 flow_registry = FlowRegistry()

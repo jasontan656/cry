@@ -3,36 +3,51 @@
 
 from typing import Dict, Any
 from hub.flow import FlowDefinition, FlowStep, flow_registry
-# 直接导入处理函数，不再依赖INTENT_HANDLERS映射
-from .intent_handlers import (
-    handle_auth_send_verification, handle_auth_verify_code, handle_auth_set_password,
-    handle_auth_oauth_google_url, handle_auth_oauth_google_callback,
-    handle_auth_oauth_facebook_url, handle_auth_oauth_facebook_callback,
-    handle_auth_forgot_password, handle_auth_reset_password
+# 导入业务服务层函数，消除循环导入依赖
+# 从services.py导入纯业务逻辑函数，不再依赖intent_handlers
+from .services import (
+    # 多步流程服务函数
+    send_verification_service, verify_code_service, set_password_service,
+    oauth_google_url_service, oauth_google_callback_service,
+    oauth_facebook_url_service, oauth_facebook_callback_service,
+    forgot_password_service, reset_password_service,
+    # 单步流程服务函数
+    register_service, login_service, refresh_token_service, logout_service,
+    get_profile_service, update_settings_service
 )
 
 
 def register_auth_flows():
     """
-    注册所有认证相关流程到flow_registry
+    register_auth_flows 注册所有认证相关流程到flow_registry的主函数
+    包含多步流程（用户注册、OAuth认证、密码重置）和单步流程（登录、受保护功能等）
+    实现完整的flow_driven架构，彻底替代旧的intent_handlers映射机制
     
-    包含用户注册流程、OAuth认证流程、密码重置流程等
-    每个流程包含完整的步骤定义和链接关系
+    流程分类:
+    - 多步流程: 需要多个步骤协调完成的复杂业务流程  
+    - 单步流程: 可以独立完成的原子业务操作
     """
+    # print 输出注册开始信息，便于系统启动时追踪注册进度
     print("=== 开始注册Auth模块认证流程 ===")
     
-    # 注册用户邮箱注册流程
+    # 注册多步流程 - 复杂业务流程注册
+    # register_user_registration_flow 通过调用注册用户邮箱验证注册的三步流程
     register_user_registration_flow()
     
-    # 注册Google OAuth流程
+    # register_google_oauth_flow 通过调用注册Google OAuth认证的两步流程  
     register_google_oauth_flow()
     
-    # 注册Facebook OAuth流程
+    # register_facebook_oauth_flow 通过调用注册Facebook OAuth认证的两步流程
     register_facebook_oauth_flow()
     
-    # 注册密码重置流程
+    # register_password_reset_flow 通过调用注册密码重置的两步流程
     register_password_reset_flow()
     
+    # 注册单步流程 - 原子业务操作注册
+    # register_single_step_flows 通过调用注册所有单步认证流程
+    register_single_step_flows()
+    
+    # print 输出注册完成信息，标记Auth模块流程注册全部完成
     print("=== Auth模块所有认证流程注册完成 ===")
 
 
@@ -80,7 +95,7 @@ def register_user_registration_flow():
         FlowStep(
             step_id="register_step1",
             module_name="auth",
-            handler_func=handle_auth_send_verification,
+            handler_func=send_verification_service,  # 使用services层函数，消除循环导入
             description="发送邮箱验证码",
             next_step="register_step2",
             required_fields=["email", "test_user"],
@@ -89,7 +104,7 @@ def register_user_registration_flow():
         FlowStep(
             step_id="register_step2", 
             module_name="auth",
-            handler_func=handle_auth_verify_code,
+            handler_func=verify_code_service,  # 使用services层函数，消除循环导入
             description="验证邮箱验证码",
             next_step="register_step3",
             previous_step="register_step1",
@@ -99,7 +114,7 @@ def register_user_registration_flow():
         FlowStep(
             step_id="register_step3",
             module_name="auth", 
-            handler_func=handle_auth_set_password,
+            handler_func=set_password_service,  # 使用services层函数，消除循环导入
             description="设置密码完成注册",
             previous_step="register_step2",
             required_fields=["email", "password"],
@@ -172,7 +187,7 @@ def register_google_oauth_flow():
         FlowStep(
             step_id="oauth_google_step1",
             module_name="auth",
-            handler_func=handle_auth_oauth_google_url,
+            handler_func=oauth_google_url_service,  # 使用services层函数，消除循环导入
             description="生成Google OAuth授权URL",
             next_step="oauth_google_step2",
             required_fields=["state"],  # state可选
@@ -181,7 +196,7 @@ def register_google_oauth_flow():
         FlowStep(
             step_id="oauth_google_step2", 
             module_name="auth",
-            handler_func=handle_auth_oauth_google_callback,
+            handler_func=oauth_google_callback_service,  # 使用services层函数，消除循环导入
             description="处理Google OAuth回调完成登录",
             previous_step="oauth_google_step1",
             required_fields=["code", "state", "expected_state"],
@@ -254,7 +269,7 @@ def register_facebook_oauth_flow():
         FlowStep(
             step_id="oauth_facebook_step1",
             module_name="auth",
-            handler_func=handle_auth_oauth_facebook_url,
+            handler_func=oauth_facebook_url_service,  # 使用services层函数，消除循环导入
             description="生成Facebook OAuth授权URL",
             next_step="oauth_facebook_step2",
             required_fields=["state"],  # state可选
@@ -263,7 +278,7 @@ def register_facebook_oauth_flow():
         FlowStep(
             step_id="oauth_facebook_step2", 
             module_name="auth",
-            handler_func=handle_auth_oauth_facebook_callback,
+            handler_func=oauth_facebook_callback_service,  # 使用services层函数，消除循环导入
             description="处理Facebook OAuth回调完成登录",
             previous_step="oauth_facebook_step1",
             required_fields=["code", "state", "expected_state"],
@@ -337,7 +352,7 @@ def register_password_reset_flow():
         FlowStep(
             step_id="reset_step1",
             module_name="auth",
-            handler_func=handle_auth_forgot_password,
+            handler_func=forgot_password_service,  # 使用services层函数，消除循环导入
             description="发送密码重置验证码",
             next_step="reset_step2",
             required_fields=["email", "test_user"],
@@ -346,7 +361,7 @@ def register_password_reset_flow():
         FlowStep(
             step_id="reset_step2", 
             module_name="auth",
-            handler_func=handle_auth_reset_password,
+            handler_func=reset_password_service,  # 使用services层函数，消除循环导入
             description="验证验证码并重置密码",
             previous_step="reset_step1",
             required_fields=["email", "code", "new_password"],
@@ -391,25 +406,216 @@ def get_all_auth_flows() -> Dict[str, FlowDefinition]:
     }
 
 
-def validate_all_auth_flows() -> Dict[str, Dict[str, Any]]:
+def register_single_step_flows():
     """
-    验证所有认证流程的完整性
+    register_single_step_flows 注册所有单步认证流程到flow_registry
+    单步流程是指可以独立完成的原子业务操作，不依赖前置步骤
     
-    返回:
-        dict: 每个流程的验证结果
+    包含的单步流程:
+    - auth_register: 直接用户注册（不走多步验证流程）
+    - auth_login: 用户登录认证
+    - auth_refresh_token: 刷新访问令牌
+    - auth_logout: 用户登出
+    - auth_get_profile: 获取用户资料（需认证）
+    - auth_update_settings: 更新用户设置（需认证）
+    - oauth_google_url: 生成Google OAuth授权URL
+    - oauth_google_callback: 处理Google OAuth回调
+    - oauth_facebook_url: 生成Facebook OAuth授权URL
+    - oauth_facebook_callback: 处理Facebook OAuth回调
     """
-    flow_ids = [
-        "user_registration",
-        "oauth_google_authentication", 
-        "oauth_facebook_authentication",
-        "password_reset"
+    # print 输出单步流程注册开始信息
+    print("--- 注册单步认证流程 ---")
+    
+    # 定义所有单步流程的步骤定义列表
+    # single_step_definitions 通过列表字面量创建单步流程定义集合
+    single_step_definitions = [
+        # auth_register 单步流程 - 直接用户注册
+        FlowStep(
+            step_id="auth_register",                    # step_id字段设置为统一的认证注册标识
+            module_name="auth",                         # module_name字段标识为auth模块
+            handler_func=register_service,              # handler_func字段使用services层的注册服务函数
+            description="直接用户注册单步流程",            # description字段描述流程功能
+            required_fields=["email", "password", "test_user"],  # required_fields列表定义必需的输入字段
+            output_fields=["user_id", "success", "message"]      # output_fields列表定义输出字段
+        ),
+        
+        # auth_login 单步流程 - 用户登录认证
+        FlowStep(
+            step_id="auth_login",                       # step_id字段设置为统一的认证登录标识
+            module_name="auth",                         # module_name字段标识为auth模块
+            handler_func=login_service,                 # handler_func字段使用services层的登录服务函数
+            description="用户登录认证单步流程",            # description字段描述登录功能
+            required_fields=["email", "password"],      # required_fields列表定义登录必需字段
+            output_fields=["access_token", "refresh_token", "user_id", "success", "message"]  # output_fields列表定义登录输出
+        ),
+        
+        # auth_refresh_token 单步流程 - 刷新访问令牌
+        FlowStep(
+            step_id="auth_refresh_token",               # step_id字段设置为统一的token刷新标识
+            module_name="auth",                         # module_name字段标识为auth模块
+            handler_func=refresh_token_service,         # handler_func字段使用services层的token刷新服务函数
+            description="刷新访问令牌单步流程",            # description字段描述token刷新功能
+            required_fields=["refresh_token"],          # required_fields列表定义刷新token必需字段
+            output_fields=["access_token", "refresh_token", "success", "message"]  # output_fields列表定义刷新输出
+        ),
+        
+        # auth_logout 单步流程 - 用户登出
+        FlowStep(
+            step_id="auth_logout",                      # step_id字段设置为统一的登出标识
+            module_name="auth",                         # module_name字段标识为auth模块
+            handler_func=logout_service,                # handler_func字段使用services层的登出服务函数
+            description="用户登出单步流程",               # description字段描述登出功能
+            required_fields=["Authorization"],          # required_fields列表定义登出认证必需字段
+            output_fields=["success", "message"]        # output_fields列表定义登出输出结果
+        ),
+        
+        # auth_get_profile 单步流程 - 获取用户资料（需认证）
+        FlowStep(
+            step_id="auth_get_profile",                 # step_id字段设置为统一的获取资料标识
+            module_name="auth",                         # module_name字段标识为auth模块
+            handler_func=get_profile_service,           # handler_func字段使用services层的获取资料服务函数
+            description="获取用户资料单步流程（需认证）",   # description字段描述获取资料功能
+            required_fields=["Authorization"],          # required_fields列表定义获取资料认证必需字段
+            output_fields=["user_profile", "success", "message"]  # output_fields列表定义资料输出
+        ),
+        
+        # auth_update_settings 单步流程 - 更新用户设置（需认证）
+        FlowStep(
+            step_id="auth_update_settings",             # step_id字段设置为统一的更新设置标识
+            module_name="auth",                         # module_name字段标识为auth模块
+            handler_func=update_settings_service,       # handler_func字段使用services层的更新设置服务函数
+            description="更新用户设置单步流程（需认证）",   # description字段描述更新设置功能
+            required_fields=["Authorization"],          # required_fields列表定义更新设置认证必需字段
+            output_fields=["updated_settings", "success", "message"]  # output_fields列表定义更新输出
+        ),
+        
+        # oauth_google_url 单步流程 - 生成Google OAuth授权URL
+        FlowStep(
+            step_id="oauth_google_url",                 # step_id字段设置为统一的Google OAuth URL标识
+            module_name="auth",                         # module_name字段标识为auth模块
+            handler_func=oauth_google_url_service,      # handler_func字段使用services层的Google URL服务函数
+            description="生成Google OAuth授权URL单步流程",  # description字段描述Google URL生成功能
+            required_fields=[],                         # required_fields列表为空，state字段可选
+            output_fields=["auth_url", "provider", "success", "message"]  # output_fields列表定义URL输出
+        ),
+        
+        # oauth_google_callback 单步流程 - 处理Google OAuth回调
+        FlowStep(
+            step_id="oauth_google_callback",            # step_id字段设置为统一的Google OAuth回调标识
+            module_name="auth",                         # module_name字段标识为auth模块
+            handler_func=oauth_google_callback_service, # handler_func字段使用services层的Google回调服务函数
+            description="处理Google OAuth回调单步流程",   # description字段描述Google回调处理功能
+            required_fields=["code"],                   # required_fields列表定义回调必需的授权码字段
+            output_fields=["access_token", "refresh_token", "user_id", "success", "message"]  # output_fields列表定义回调输出
+        ),
+        
+        # oauth_facebook_url 单步流程 - 生成Facebook OAuth授权URL
+        FlowStep(
+            step_id="oauth_facebook_url",               # step_id字段设置为统一的Facebook OAuth URL标识
+            module_name="auth",                         # module_name字段标识为auth模块
+            handler_func=oauth_facebook_url_service,    # handler_func字段使用services层的Facebook URL服务函数
+            description="生成Facebook OAuth授权URL单步流程",  # description字段描述Facebook URL生成功能
+            required_fields=[],                         # required_fields列表为空，state字段可选
+            output_fields=["auth_url", "provider", "success", "message"]  # output_fields列表定义URL输出
+        ),
+        
+        # oauth_facebook_callback 单步流程 - 处理Facebook OAuth回调
+        FlowStep(
+            step_id="oauth_facebook_callback",          # step_id字段设置为统一的Facebook OAuth回调标识
+            module_name="auth",                         # module_name字段标识为auth模块
+            handler_func=oauth_facebook_callback_service,  # handler_func字段使用services层的Facebook回调服务函数
+            description="处理Facebook OAuth回调单步流程",   # description字段描述Facebook回调处理功能
+            required_fields=["code"],                   # required_fields列表定义回调必需的授权码字段
+            output_fields=["access_token", "refresh_token", "user_id", "success", "message"]  # output_fields列表定义回调输出
+        ),
+        
+        # auth_forgot_password 单步流程 - 发送密码重置验证码
+        FlowStep(
+            step_id="auth_forgot_password",             # step_id字段设置为统一的忘记密码标识
+            module_name="auth",                         # module_name字段标识为auth模块
+            handler_func=forgot_password_service,       # handler_func字段使用services层的忘记密码服务函数
+            description="发送密码重置验证码单步流程",       # description字段描述忘记密码功能
+            required_fields=["email"],                  # required_fields列表定义必需的邮箱字段
+            output_fields=["success", "message"]        # output_fields列表定义输出字段
+        ),
+        
+        # auth_reset_password 单步流程 - 验证码重置密码
+        FlowStep(
+            step_id="auth_reset_password",              # step_id字段设置为统一的重置密码标识
+            module_name="auth",                         # module_name字段标识为auth模块
+            handler_func=reset_password_service,        # handler_func字段使用services层的重置密码服务函数
+            description="验证码重置密码单步流程",           # description字段描述重置密码功能
+            required_fields=["email", "code", "new_password"],  # required_fields列表定义重置密码必需字段
+            output_fields=["success", "message"]        # output_fields列表定义重置输出
+        )
     ]
     
+    # 批量注册所有单步流程定义到flow_registry
+    # for step_definition in single_step_definitions 遍历所有单步流程定义
+    for step_definition in single_step_definitions:
+        # flow_registry.register_step 通过调用流程注册中心注册每个单步流程
+        step_registered = flow_registry.register_step(step_definition)
+        
+        # if step_registered 条件检查单步流程注册是否成功
+        if step_registered:
+            # print 输出单步流程注册成功信息，包含步骤标识
+            print(f"  ✓ 单步流程注册成功: {step_definition.step_id}")
+        else:
+            # print 输出单步流程注册失败信息，包含步骤标识
+            print(f"  ✗ 单步流程注册失败: {step_definition.step_id}")
+    
+    # print 输出单步流程注册完成信息
+    print("  单步认证流程注册完成")
+    print("")
+
+
+def validate_all_auth_flows() -> Dict[str, Dict[str, Any]]:
+    """
+    validate_all_auth_flows 验证所有认证流程的完整性
+    检查多步流程和单步流程是否都成功注册到flow_registry中
+    
+    返回:
+        dict: 每个流程的验证结果，包含多步流程和单步流程的验证状态
+    """
+    # flow_ids 通过列表定义需要验证的多步流程标识
+    flow_ids = [
+        "user_registration",                # 用户注册多步流程
+        "oauth_google_authentication",      # Google OAuth多步流程 
+        "oauth_facebook_authentication",    # Facebook OAuth多步流程
+        "password_reset"                    # 密码重置多步流程
+    ]
+    
+    # single_step_ids 通过列表定义需要验证的单步流程标识
+    single_step_ids = [
+        "auth_register", "auth_login", "auth_refresh_token", "auth_logout",
+        "auth_get_profile", "auth_update_settings",
+        "oauth_google_url", "oauth_google_callback",
+        "oauth_facebook_url", "oauth_facebook_callback",
+        "auth_forgot_password", "auth_reset_password"
+    ]
+    
+    # validation_results 通过字典初始化验证结果存储结构
     validation_results = {}
     
+    # 验证多步流程完整性
+    # for flow_id in flow_ids 遍历所有多步流程标识
     for flow_id in flow_ids:
+        # flow_registry.validate_flow_integrity 通过调用验证指定流程的完整性
         validation_results[flow_id] = flow_registry.validate_flow_integrity(flow_id)
     
+    # 验证单步流程注册状态
+    # for step_id in single_step_ids 遍历所有单步流程标识
+    for step_id in single_step_ids:
+        # flow_registry.get_step 通过调用检查单步流程是否已注册
+        step_definition = flow_registry.get_step(step_id)
+        # validation_results[step_id] 通过字典赋值记录单步流程验证结果
+        validation_results[step_id] = {
+            "valid": step_definition is not None,      # valid字段标识流程是否有效注册
+            "type": "single_step",                     # type字段标识为单步流程类型
+            "registered": step_definition is not None  # registered字段标识是否已注册
+        }
+    
+    # return 语句返回包含所有流程验证结果的字典
     return validation_results
 
 

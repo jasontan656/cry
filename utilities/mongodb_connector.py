@@ -35,7 +35,7 @@ Collections常量列表：
 COLLECTIONS = [
     "user_archive",      # 用户归档数据
     "user_chathistory",  # 用户聊天历史
-    "user_profiles",     # 用户个人资料
+    "user_profiles",     # 用户个人画像
     "user_status",       # 用户状态信息
 ]
 

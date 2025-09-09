@@ -514,3 +514,569 @@ logger.error(f"Email sending failed: email=***, error={str(e)}")
 | TOK-E01 | 使用access_token作为refresh_token | `TOKEN_REFRESH_ERROR` | type字段验证 |
 | TOK-E02 | 篡改JWT签名 | `AUTHENTICATION_REQUIRED` | HS256签名验证 |
 | TOK-E03 | 过期access_token访问受保护接口 | `AUTHENTICATION_REQUIRED` | exp字段检查 |
+
+### 8.5 并发与边界测试
+
+#### 并发注册测试
+```python
+# 伪代码：并发测试用例
+async def test_concurrent_registration():
+    """并发相同邮箱注册，验证唯一约束"""
+    tasks = [
+        auth_send_verification("same@test.com") 
+        for _ in range(10)
+    ]
+    results = await asyncio.gather(*tasks, return_exceptions=True)
+    # 验证：只有1个成功，9个EMAIL_ALREADY_REGISTERED
+```
+
+#### 验证码暴力测试
+```python
+async def test_verification_code_brute_force():
+    """验证码暴力破解测试"""
+    # 发送验证码
+    await auth_send_verification("target@test.com")
+    
+    # 尝试1000次错误验证码 
+    for i in range(1000):
+        result = await auth_verify_code("target@test.com", f"{i:06d}")
+        assert result["success"] == False
+    
+    # 验证正确验证码仍然有效
+    correct_result = await auth_verify_code("target@test.com", "123456") 
+    assert correct_result["success"] == True
+```
+
+## 9. 夹具与模拟（Fixtures & Mocks）
+
+### 测试夹具（最小数据集）
+
+#### 用户数据夹具
+```python
+@pytest.fixture
+def test_users():
+    return {
+        "complete_user": {
+            "user_id": "11111111-1111-1111-1111-111111111111",
+            "email": "complete@test.com",
+            "username": "complete@test.com", 
+            "hashed_password": "$2b$12$test.hash.value"
+        },
+        "oauth_only_user": {
+            "user_id": "22222222-2222-2222-2222-222222222222", 
+            "email": "oauth@test.com",
+            "username": "oauth@test.com",
+            "oauth_google_id": "google-123456789"
+            # 注意：无hashed_password
+        },
+        "mixed_user": {
+            "user_id": "33333333-3333-3333-3333-333333333333",
+            "email": "mixed@test.com", 
+            "username": "mixed@test.com",
+            "hashed_password": "$2b$12$mixed.hash.value",
+            "oauth_facebook_id": "facebook-987654321"
+        }
+    }
+```
+
+#### 验证码缓存夹具
+```python
+@pytest.fixture 
+def verification_codes_cache():
+    """模拟验证码缓存状态"""
+    return {
+        "valid@test.com": ("123456", time.time()),           # 有效验证码
+        "expired@test.com": ("999999", time.time() - 400),   # 过期验证码(>5分钟)
+    }
+```
+
+#### 数据库初始状态夹具
+```python
+@pytest.fixture
+async def clean_database():
+    """清空数据库并设置初始状态"""
+    db = DatabaseOperations()
+    
+    # 清空相关集合
+    await db.delete_many("user_profiles", {})
+    await db.delete_many("user_status", {})  
+    await db.delete_many("user_archive", {})
+    
+    yield db
+    
+    # 测试后清理
+    await db.delete_many("user_profiles", {})
+    await db.delete_many("user_status", {})
+    await db.delete_many("user_archive", {})
+```
+
+### 外部依赖Mock策略
+
+#### 邮件服务Mock
+```python
+@pytest.fixture
+def mock_email_service(monkeypatch):
+    """Mock邮件发送服务"""
+    sent_emails = []
+    
+    async def mock_send_email(to, subject, body, content_type="plain"):
+        sent_emails.append({
+            "to": to,
+            "subject": subject, 
+            "body": body,
+            "content_type": content_type,
+            "timestamp": time.time()
+        })
+        return True  # 总是返回发送成功
+    
+    monkeypatch.setattr("utilities.mail.send_email", mock_send_email)
+    return sent_emails
+```
+
+#### OAuth服务Mock
+```python  
+@pytest.fixture
+def mock_google_oauth(monkeypatch):
+    """Mock Google OAuth服务"""
+    oauth_responses = {}
+    
+    def mock_google_auth_url(state=None):
+        return f"https://accounts.google.com/oauth/authorize?state={state}"
+    
+    def mock_google_callback(code, state, expected_state): 
+        if code == "valid_google_code":
+            return {
+                "user_id": "google-test-user-123",
+                "email": "google@test.com",
+                "access_token": "mock-google-token",
+                "refresh_token": "mock-google-refresh"
+            }
+        else:
+            raise ValueError("Invalid Google authorization code")
+    
+    monkeypatch.setattr("applications.auth.oauth_google.get_google_auth_url", mock_google_auth_url)
+    monkeypatch.setattr("applications.auth.oauth_google.login_with_google", mock_google_callback)
+    return oauth_responses
+```
+
+#### 时间控制Mock
+```python
+@pytest.fixture
+def mock_time():
+    """可控制的时间Mock，用于验证码过期测试"""
+    base_time = time.time()
+    current_offset = 0
+    
+    def mock_time_func():
+        return base_time + current_offset
+        
+    def advance_time(seconds):
+        nonlocal current_offset
+        current_offset += seconds
+    
+    with patch('time.time', mock_time_func):
+        mock_time_func.advance = advance_time
+        yield mock_time_func
+```
+
+### 可复用构造器
+
+#### 用户构造器
+```python
+class UserFactory:
+    """用户数据构造器"""
+    
+    @staticmethod
+    async def create_complete_user(email=None, password="testpass123"):
+        """创建完整注册用户"""
+        email = email or f"user{uuid.uuid4().hex[:8]}@test.com"
+        
+        # 模拟完整注册流程
+        await auth_send_verification({"email": email, "test_user": True})
+        await auth_verify_code({"email": email, "code": "123456"})
+        result = await auth_set_password({"email": email, "password": password})
+        
+        return result["user_id"]
+    
+    @staticmethod 
+    async def create_oauth_user(provider="google", email=None):
+        """创建纯OAuth用户"""
+        email = email or f"oauth{uuid.uuid4().hex[:8]}@test.com"
+        
+        # 模拟OAuth回调
+        oauth_callback = {
+            "code": "valid_oauth_code",
+            "state": "test_state", 
+            "expected_state": "test_state"
+        }
+        
+        if provider == "google":
+            result = await auth_oauth_google_callback(oauth_callback)
+        elif provider == "facebook":
+            result = await auth_oauth_facebook_callback(oauth_callback)
+            
+        return result["user_id"]
+```
+
+#### 流程状态构造器
+```python
+class FlowStateFactory:
+    """流程状态构造器"""
+    
+    @staticmethod
+    async def setup_registration_mid_flow(email):
+        """设置注册流程中断状态"""
+        # 发送验证码但不验证
+        await auth_send_verification({"email": email, "test_user": True})
+        return {"email": email, "expected_code": "123456"}
+    
+    @staticmethod
+    async def setup_reset_mid_flow(email):
+        """设置密码重置流程中断状态"""  
+        await auth_forgot_password({"email": email, "test_user": True})
+        return {"email": email, "expected_reset_code": "123456"}
+```
+
+## 10. 生成测试脚本的建议（Script-Generation Hints）
+
+### 建议脚本技术栈
+
+**主框架**: `pytest + httpx + asyncio`
+- **理由**: 代码库大量使用 `async/await`，需要异步测试支持
+- **HTTP客户端**: `httpx` 支持异步HTTP请求
+- **断言库**: pytest内置断言 + `pytest-asyncio`
+
+### 目录组织建议
+```
+tests/
+├── auth/
+│   ├── __init__.py
+│   ├── conftest.py                 # 通用夹具
+│   ├── fixtures/
+│   │   ├── users.py               # 用户数据夹具
+│   │   ├── mocks.py               # 外部依赖Mock
+│   │   └── database.py            # 数据库操作夹具
+│   ├── unit/
+│   │   ├── test_validators.py     # 输入验证单元测试
+│   │   ├── test_hashing.py        # 密码哈希单元测试
+│   │   ├── test_tokens.py         # JWT令牌单元测试
+│   │   └── test_repository.py     # 数据库操作单元测试
+│   ├── integration/
+│   │   ├── test_registration_flow.py    # 注册流程集成测试  
+│   │   ├── test_oauth_flow.py          # OAuth流程集成测试
+│   │   ├── test_password_reset_flow.py  # 重置流程集成测试
+│   │   └── test_protected_routes.py     # 认证接口集成测试
+│   ├── e2e/
+│   │   ├── test_complete_user_journey.py # 端到端用户旅程
+│   │   └── test_cross_flow_scenarios.py  # 跨流程场景测试
+│   └── stress/
+│       ├── test_concurrent_registration.py # 并发注册测试
+│       └── test_verification_brute_force.py # 验证码暴力测试
+```
+
+### 命名规范
+- **测试类**: `TestAuthRegistrationFlow`, `TestOAuthIntegration`
+- **测试方法**: `test_{功能}_{场景}_{期望结果}`
+  - `test_auth_send_verification_new_email_should_succeed`
+  - `test_auth_verify_code_expired_code_should_fail`  
+  - `test_oauth_google_callback_invalid_state_should_raise_error`
+
+### 基线启动/清理流程
+
+#### pytest配置 (pytest.ini)
+```ini
+[tool:pytest]
+asyncio_mode = auto
+markers = 
+    auth: auth module tests
+    e2e: end-to-end tests
+    slow: tests that take > 5 seconds
+    integration: integration tests requiring external services
+```
+
+#### conftest.py基线设置
+```python
+import pytest
+import asyncio
+from applications.auth import initialize_module, cleanup_module
+from utilities.mongodb_connector import DatabaseOperations
+
+@pytest.fixture(scope="session")  
+async def event_loop():
+    """提供会话级别的事件循环"""
+    loop = asyncio.get_event_loop_policy().new_event_loop()
+    yield loop
+    loop.close()
+
+@pytest.fixture(scope="session", autouse=True)
+async def setup_auth_module():
+    """会话级别的auth模块初始化"""
+    # 初始化auth模块
+    await initialize_module({"test_mode": True})
+    
+    yield
+    
+    # 清理auth模块
+    await cleanup_module()
+
+@pytest.fixture(autouse=True)
+async def clean_test_data():
+    """每个测试前后清理测试数据"""
+    db = DatabaseOperations()
+    test_emails = ["test@", "@test.com", "oauth@", "complete@"]
+    
+    # 清理测试用户数据
+    for email_pattern in test_emails:
+        await db.delete_many("user_profiles", {"email": {"$regex": email_pattern}})
+        await db.delete_many("user_status", {})  # 通过user_id关联清理
+    
+    yield
+    
+    # 测试后清理
+    for email_pattern in test_emails:
+        await db.delete_many("user_profiles", {"email": {"$regex": email_pattern}})
+        await db.delete_many("user_status", {})
+```
+
+### 覆盖率目标
+
+#### 功能覆盖率（100%）
+- ✅ 所有已实现的intent处理器
+- ✅ 所有数据模型验证逻辑
+- ✅ 所有异常处理分支
+
+#### 分支覆盖率（≥90%）
+- ✅ 正向路径 + 主要错误路径
+- ✅ OAuth用户 vs 完整用户分支
+- ✅ test_user vs 正常用户分支
+
+#### 场景覆盖率
+- **基础场景**: 每个流程的happy path
+- **边界场景**: 输入验证、过期时间、重复操作
+- **并发场景**: 竞争条件、重复提交
+- **故障场景**: 外部服务失败、数据库异常
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+## 11. 未定义与待确认（Open Points）
+
+### 【TODO】配置与环境变量确认
+
+**验证方法**: 搜索OAuth配置文件和环境变量引用
+```bash
+# 搜索OAuth配置
+find . -name "*.py" -exec grep -l "GOOGLE_.*CLIENT" {} \;
+find . -name "*.py" -exec grep -l "FACEBOOK_.*CLIENT" {} \;
+
+# 搜索邮件配置
+find . -name "*.py" -exec grep -l "SMTP_" {} \;
+grep -r "mail.*config" utilities/mail/
+```
+
+**关键待确认**:
+- `GOOGLE_OAUTH_CLIENT_ID` 和 `GOOGLE_OAUTH_CLIENT_SECRET` 的具体使用
+- `FACEBOOK_OAUTH_CLIENT_ID` 和 `FACEBOOK_OAUTH_CLIENT_SECRET` 的具体使用  
+- OAuth回调URL的配置方式
+- SMTP邮件服务器配置项
+
+### 【TODO】OAuth具体实现分析
+
+**验证方法**: 详细分析OAuth相关文件
+```bash
+# 分析OAuth实现
+cat applications/auth/oauth_google.py | head -50
+cat applications/auth/oauth_facebook.py | head -50
+cat applications/auth/oauth_utils.py | head -50
+
+# 搜索OAuth状态管理
+grep -r "state" applications/auth/oauth_*.py
+grep -r "CSRF\|csrf" applications/auth/
+```
+
+**待确认机制**:
+- OAuth state参数的生成和验证机制
+- 授权码换取access_token的具体流程
+- OAuth用户信息获取和解析逻辑
+- OAuth错误处理和重试机制
+
+### 【TODO】数据库事务和并发控制
+
+**验证方法**: 分析数据库操作的事务性
+```bash
+# 检查事务使用
+grep -r "transaction\|Transaction" utilities/mongodb_connector.py
+grep -r "session\|Session" utilities/mongodb_connector.py
+
+# 检查并发控制
+grep -r "lock\|Lock\|atomic" applications/auth/
+```
+
+**关键验证点**:
+- `create_user()` 双表写入的事务保证
+- `check_user_exists()` → `create_user()` 竞争条件处理
+- `user_status` 更新的原子性保证
+- 高并发场景下的数据一致性
+
+### 【TODO】令牌黑名单和吊销机制
+
+**验证方法**: 搜索token管理相关代码
+```bash
+# 搜索令牌吊销
+grep -r "revoke\|blacklist\|invalidate" applications/auth/
+grep -r "logout" applications/auth/ | grep -i "token"
+
+# 分析protected_routes实现
+cat applications/auth/protected_routes.py
+```
+
+**待确认机制**:
+- 用户登出时是否有令牌吊销机制
+- 令牌黑名单的存储和检查机制
+- 安全事件触发的批量令牌吊销
+
+### 【TODO】速率限制和防暴力机制
+
+**验证方法**: 搜索限流相关代码
+```bash
+# 搜索速率限制
+grep -r "rate.*limit\|throttle\|frequency" applications/auth/
+grep -r "attempt\|retry.*count" applications/auth/
+
+# 检查验证码防护
+grep -r "brute\|force\|attempt" applications/auth/email_verification.py
+```
+
+**待确认机制**:
+- 验证码申请频率限制（同邮箱、同IP）
+- 验证码暴力尝试防护
+- 登录失败锁定机制
+- OAuth回调频率限制
+
+### 【TODO】日志和监控实现
+
+**验证方法**: 检查实际日志代码
+```bash
+# 搜索日志调用
+grep -r "logger\|logging\.info\|print" applications/auth/
+grep -r "log.*auth\|auth.*log" utilities/logger/
+
+# 检查监控指标
+find . -name "*.py" -exec grep -l "metric\|counter\|timer" {} \;
+```
+
+**需要补充日志点**:
+- 请求进入和响应时间记录
+- 敏感操作审计日志（密码重置、OAuth绑定）
+- 错误详细信息和堆栈跟踪
+- 业务指标埋点（成功率、用户转换）
+
+### 【TODO】现有测试覆盖情况
+
+**验证方法**: 分析现有测试代码
+```bash
+# 检查现有测试
+find applications/auth/test/ -name "*.py" -exec wc -l {} \;
+ls -la applications/auth/test/
+
+# 分析测试覆盖范围
+grep -r "def test_" applications/auth/test/
+```
+
+**缺口分析**:
+- 现有测试与本文档测试矩阵的对比
+- 未覆盖的边界用例识别
+- 集成测试和E2E测试的缺失情况
+
+### 【TODO】错误处理和异常传播
+
+**验证方法**: 跟踪异常处理链路
+```bash
+# 跟踪异常传播
+grep -r "try:\|except\|raise" applications/auth/ | head -20
+grep -r "Exception\|Error" hub/router.py
+
+# 检查HTTP错误码映射
+grep -r "400\|401\|409\|500" hub/
+```
+
+**待验证路径**:
+- intent_handlers异常 → hub/router → HTTP响应码映射
+- 数据库异常的具体错误类型和处理
+- 外部服务（邮件、OAuth）异常的降级策略
+
+### 【TODO】性能和扩展性考虑
+
+**验证方法**: 分析性能瓶颈点
+```bash
+# 检查缓存使用
+grep -r "cache\|Cache" applications/auth/
+grep -r "_verification_codes\|_reset_codes" applications/auth/
+
+# 分析数据库查询模式
+grep -r "db\.find\|db\.insert\|db\.update" applications/auth/repository.py
+```
+
+**关键验证点**:
+- 验证码内存缓存的扩展性（单机 vs 分布式）
+- 数据库查询的索引使用情况
+- 高并发场景下的性能表现
+- OAuth第三方调用的超时和重试策略
+
+---
+
+## 验证建议清单
+
+为确保本文档准确性，建议按以下优先级验证上述【TODO】项：
+
+1. **P0 (必须验证)**: 配置项、OAuth实现、数据库事务
+2. **P1 (高优先级)**: 错误处理、现有测试、令牌安全  
+3. **P2 (中优先级)**: 速率限制、日志监控、性能考虑
+
+**验证方法示例**:
+```python
+# 最小验证脚本
+async def verify_oauth_config():
+    """验证OAuth配置是否完整"""
+    from applications.auth.oauth_google import get_google_auth_url
+    try:
+        url = get_google_auth_url("test_state")
+        print(f"✓ Google OAuth配置正常: {url}")
+    except Exception as e:
+        print(f"✗ Google OAuth配置异常: {e}")
+
+# 数据库事务验证
+async def verify_user_creation_atomicity():
+    """验证用户创建的原子性"""
+    # 模拟创建过程中的异常，检查数据一致性
+    pass
+```
+
+通过以上验证，可确保生成的自动化测试脚本覆盖所有真实的业务场景和技术约束。

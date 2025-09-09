@@ -148,6 +148,53 @@ async def handle_intent(request: Request):
         # status_code 参数设置为 400 表示客户端请求错误
         # detail 参数直接使用预设错误字典，避免动态构建
         raise HTTPException(status_code=400, detail=e.to_dict())
+    
+    # === 业务异常处理层 ===
+    # 使用字符串匹配的方式检测业务异常，避免导入循环依赖
+    
+    except Exception as e:
+        exception_name = type(e).__name__
+        error_msg = str(e)
+        
+        # 处理参数无效异常 - HTTP 400 Bad Request  
+        if exception_name == "InvalidInputError":
+            logger.warning(f"业务参数错误: {error_msg}")
+            raise HTTPException(status_code=400, detail={
+                "error_type": "InvalidInput",
+                "message": error_msg,
+                "error_code": "INVALID_INPUT"
+            })
+        
+        # 处理认证失败异常 - HTTP 401 Unauthorized
+        elif exception_name == "InvalidCredentialsError":
+            logger.warning(f"认证失败: {error_msg}")
+            raise HTTPException(status_code=401, detail={
+                "error_type": "InvalidCredentials",
+                "message": error_msg,
+                "error_code": "AUTHENTICATION_FAILED"
+            })
+        
+        # 处理邮箱已注册异常 - HTTP 409 Conflict
+        elif exception_name == "EmailAlreadyRegisteredError":
+            logger.warning(f"邮箱冲突: {error_msg}")
+            raise HTTPException(status_code=409, detail={
+                "error_type": "EmailConflict",
+                "message": error_msg,
+                "error_code": "EMAIL_ALREADY_EXISTS"
+            })
+        
+        # 如果是RuntimeError，专门处理
+        elif isinstance(e, RuntimeError):
+            # 将RuntimeError转发给下面的RuntimeError处理器
+            raise e
+        
+        # 如果是ValueError，转发给下面的ValueError处理器
+        elif isinstance(e, ValueError):
+            raise e
+        
+        # 其他未知异常，转发给最后的通用异常处理器
+        else:
+            raise e
         
     except RuntimeError as e:
         # RuntimeError 异常表示系统运行时错误（如handler无效、执行失败等）

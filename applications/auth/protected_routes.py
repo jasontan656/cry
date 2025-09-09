@@ -225,20 +225,13 @@ def handle_refresh_token(request_data: dict) -> dict:
         }
     
     except ValueError as e:
-        # return 语句返回失败响应，处理刷新令牌无效的异常
-        return {
-            "success": False,
-            "error": "刷新令牌无效或已过期",
-            "error_type": "INVALID_REFRESH_TOKEN"
-        }
+        # ValueError 抛出认证错误异常，让上层转换为401状态码
+        from .exceptions import InvalidCredentialsError
+        raise InvalidCredentialsError("刷新令牌无效或已过期")
     
     except Exception as e:
-        # return 语句返回失败响应，处理其他未预期的异常
-        return {
-            "success": False,
-            "error": "令牌刷新失败",
-            "error_type": "TOKEN_REFRESH_ERROR"
-        }
+        # Exception 对于其他异常，包装为系统错误重新抛出
+        raise RuntimeError(f"令牌刷新失败: {str(e)}")
 
 
 def handle_logout(current_user: AuthenticatedUser) -> dict:

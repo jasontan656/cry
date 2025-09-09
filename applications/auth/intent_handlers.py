@@ -805,33 +805,21 @@ async def handle_auth_logout(payload: Dict[str, Any]) -> Dict[str, Any]:
         )
 
 
-# 意图处理器映射字典
-INTENT_HANDLERS = {
-    # 注册相关意图
-    "auth_register": handle_auth_register,
-    "auth_send_verification": handle_auth_send_verification,
-    "auth_verify_code": handle_auth_verify_code,
-    "auth_set_password": handle_auth_set_password,
-    
-    # 登录相关意图
-    "auth_login": handle_auth_login,
-    
-    # OAuth相关意图
-    "auth_oauth_google_url": handle_auth_oauth_google_url,
-    "auth_oauth_google_callback": handle_auth_oauth_google_callback,
-    "auth_oauth_facebook_url": handle_auth_oauth_facebook_url,
-    "auth_oauth_facebook_callback": handle_auth_oauth_facebook_callback,
-    
-    # 密码重置相关意图
-    "auth_forgot_password": handle_auth_forgot_password,
-    "auth_reset_password": handle_auth_reset_password,
-    
-    # 受保护功能意图
-    "auth_get_profile": handle_auth_get_profile,
-    "auth_update_settings": handle_auth_update_settings,
-    "auth_refresh_token": handle_auth_refresh_token,
-    "auth_logout": handle_auth_logout
-}
+# ============ 旧架构清理完成 ============
+# 
+# 注意：INTENT_HANDLERS字典已删除，完成flow_registry架构迁移
+# 
+# 迁移说明：
+# - 所有业务逻辑函数已迁移到services.py
+# - 所有流程注册已转移到flow_definitions.py  
+# - 旧的意图映射机制已被flow_registry替代
+# 
+# 如需使用认证功能，请通过以下方式：
+# - 单步流程: 使用auth_login、auth_logout等新的意图标识
+# - 多步流程: 使用register_step1/2/3、reset_step1/2等流程标识
+# - 业务逻辑: 导入applications.auth.services中的对应函数
+# 
+# ============ 旧架构清理完成 ============
 
 
 # 导出所有意图处理器函数
@@ -856,8 +844,7 @@ __all__ = [
     
     # 受保护功能意图处理器
     "handle_auth_get_profile", "handle_auth_update_settings",
-    "handle_auth_refresh_token", "handle_auth_logout",
+    "handle_auth_refresh_token", "handle_auth_logout"
     
-    # 意图处理器映射
-    "INTENT_HANDLERS"
+    # 注意：INTENT_HANDLERS映射已删除，请使用services.py中的对应函数
 ]

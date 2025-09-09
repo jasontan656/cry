@@ -1,0 +1,70 @@
+{
+  "overall_status": "PASSED",
+  "total_gates": 4,
+  "passed_gates": 4,
+  "failed_gates": 0,
+  "success_rate": "100.0%",
+  "duration_seconds": 0.459208,
+  "start_time": "2025-09-09T17:19:05.312122",
+  "end_time": "2025-09-09T17:19:05.771330",
+  "detailed_results": [
+    {
+      "test_name": "Flow Registry 完整性验证",
+      "success": true,
+      "message": "Flow registry完整性验证通过: 100.0%成功率",
+      "timestamp": "2025-09-09T17:19:05.770811",
+      "data": {
+        "total_expected_flows": 14,
+        "missing_multi_step_flows": [],
+        "missing_single_step_flows": [],
+        "success_rate": "100.0%",
+        "multi_step_success": 4,
+        "single_step_success": 10
+      }
+    },
+    {
+      "test_name": "Services层函数验证",
+      "success": true,
+      "message": "Services层函数验证通过: 19/19个函数可用",
+      "timestamp": "2025-09-09T17:19:05.770811",
+      "data": {
+        "total_functions": 19,
+        "callable_functions": 19,
+        "import_success": true,
+        "function_categories": {
+          "response_formatters": 2,
+          "auth_extractors": 2,
+          "business_services": 13
+        }
+      }
+    },
+    {
+      "test_name": "架构元数据验证",
+      "success": true,
+      "message": "架构元数据验证通过: architecture=flow_driven, migrated=True",
+      "timestamp": "2025-09-09T17:19:05.771330",
+      "data": {
+        "architecture": "flow_driven",
+        "architecture_type": "flow_driven",
+        "migration_completed": true,
+        "intent_handlers_removed": true,
+        "architecture_consistent": true,
+        "migration_flags_correct": true,
+        "total_flow_count": 14
+      }
+    },
+    {
+      "test_name": "循环导入解决验证",
+      "success": true,
+      "message": "循环导入问题验证通过: 所有关键导入路径正常",
+      "timestamp": "2025-09-09T17:19:05.771330",
+      "data": {
+        "flow_definitions_import": "成功",
+        "services_import": "成功",
+        "module_init_import": "成功",
+        "all_imports_callable": true,
+        "import_path_resolved": true
+      }
+    }
+  ]
+}
