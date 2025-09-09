@@ -17,6 +17,12 @@ from typing import Dict, Any, Optional
 project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 sys.path.insert(0, project_root)
 
+# 先导入MBTI模块以触发自注册机制
+import applications.mbti
+
+# 导入Time类用于生成正确格式的Request ID
+from utilities.time import Time
+
 # 从hub.hub模块导入run函数，这是系统的主要调度入口
 from hub.hub import run as dispatcher_handler
 
@@ -169,7 +175,7 @@ class FlowInterruptionTestRunner:
             
             # === Step 3: 反向问题生成（中断点） ===
             step3_data = {
-                "mbti_result": step2_result.get("mbti_result", {})
+                "mbti_type": step2_result.get("mbti_result", {}).get("mbti_type")  # step3期望的格式
             }
             step3_result = await self.execute_step("mbti_step3", step3_data)
             phase_result["steps_completed"].append(step3_result)
@@ -421,7 +427,7 @@ class FlowInterruptionTestRunner:
         request_data = {
             "intent": intent,
             "user_id": self.user_id,
-            "request_id": f"2024-12-19T11:{30 + hash(intent) % 30:02d}:00+0800_{intent}-interrupt-test-{int(time.time())}",
+            "request_id": Time.timestamp(),  # 使用正确的timestamp_uuid格式
             "flow_id": self.flow_id,
             "test_scenario": f"interruption_test_{intent}"
         }
@@ -441,12 +447,21 @@ class FlowInterruptionTestRunner:
         
         return result
     
-    def generate_mock_responses(self) -> Dict[str, int]:
-        """生成模拟MBTI问卷答案"""
-        return {
-            "E1": 4, "I1": 2, "S1": 3, "N1": 4,
-            "T1": 4, "F1": 2, "J1": 4, "P1": 2
-        }
+    def generate_mock_responses(self) -> Dict[int, int]:
+        """生成模拟MBTI问卷答案，使用数字索引格式匹配前端实际提交格式"""
+        # 生成96题的模拟答案（匹配step1_mbti_questions.json中的题目数量）
+        import random
+        responses = {}
+        
+        # 为96个问题生成模拟答案
+        for i in range(96):
+            # 模拟不同倾向的答案分布
+            if i % 8 < 4:  # E/S/T/J 倾向题目
+                responses[i] = random.choice([3, 4, 4, 5])  # 偏向高分
+            else:  # I/N/F/P 倾向题目  
+                responses[i] = random.choice([1, 2, 2, 3])  # 偏向低分
+        
+        return responses
     
     def generate_mock_reverse_responses(self) -> Dict[str, int]:
         """生成模拟反向问题答案"""

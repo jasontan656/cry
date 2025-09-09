@@ -359,8 +359,8 @@ async def process(request: Dict[str, Any]) -> Dict[str, Any]:
                 "analysis": analysis_text
             }
             
-            # user_status_manager.update_flow_state 通过调用更新流程状态
-            await user_status_manager.update_flow_state(user_id, flow_id, current_state)
+            # user_status_manager.save_user_flow_state 通过调用保存流程状态
+            await user_status_manager.save_user_flow_state(current_state)
 
         # response 通过字典创建，构建返回给前端的完整响应结构，包含流程上下文字段
         response = {

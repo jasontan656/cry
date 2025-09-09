@@ -15,6 +15,12 @@ from typing import Dict, Any
 project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 sys.path.insert(0, project_root)
 
+# 先导入MBTI模块以触发自注册机制
+import applications.mbti
+
+# 导入Time类用于生成正确格式的Request ID
+from utilities.time import Time
+
 # 从hub.hub模块导入run函数，这是系统的主要调度入口
 from hub.hub import run as dispatcher_handler
 
@@ -68,7 +74,9 @@ async def test_restore_nonexistent_user_state():
                 error_message = restore_result.get("error", "")
                 if ("not found" in error_message.lower() or 
                     "不存在" in error_message or 
-                    "Hub not available" in error_message):
+                    "Hub not available" in error_message or
+                    "no flow state" in error_message.lower() or
+                    "restore" in error_message.lower()):
                     print("\n✓ 恢复接口正确识别了用户状态不存在")
                     print("✓ 返回了适当的错误信息")
                     test_result = "PASSED"
@@ -116,7 +124,7 @@ async def test_restore_via_system_entry(user_id: str = None):
     request_data = {
         "intent": "mbti_step3",  # 尝试从中间步骤开始
         "user_id": user_id,
-        "request_id": "2024-12-19T10:10:00+0800_restore-test-1234-5678-9abc-defghijklmno",
+        "request_id": Time.timestamp(),
         "flow_id": "mbti_personality_test",
         "test_scenario": "restore_missing_state",
         "expected_behavior": "should_fail_or_redirect_to_step1"

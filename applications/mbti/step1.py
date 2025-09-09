@@ -103,9 +103,9 @@ async def process(request: Dict[str, Any]) -> Dict[str, Any]:
             status="ongoing"
         )
         
-        # user_status_manager.create_or_update_flow_state 通过调用状态管理器
+        # user_status_manager.save_user_flow_state 通过调用状态管理器
         # 传入user_state参数，创建或更新用户的流程状态记录
-        await user_status_manager.create_or_update_flow_state(user_state)
+        await user_status_manager.save_user_flow_state(user_state)
 
         # _handle_mbti_step_jump 通过await调用异步函数，传入request_id、user_id、flow_id和步骤编号1
         # 返回包含测试引导信息的字典，包含预设的英文提示和测试链接

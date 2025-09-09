@@ -16,6 +16,12 @@ from typing import Dict, Any, List
 project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 sys.path.insert(0, project_root)
 
+# 先导入MBTI模块以触发自注册机制
+import applications.mbti
+
+# 导入Time类用于生成正确格式的Request ID
+from utilities.time import Time
+
 # 从hub.hub模块导入run函数，这是系统的主要调度入口
 from hub.hub import run as dispatcher_handler
 
@@ -145,7 +151,7 @@ class MBTIFlowTestRunner:
         request_data = {
             "intent": "mbti_step1",
             "user_id": self.user_id,
-            "request_id": f"2024-12-19T11:00:00+0800_step1-flow-test-{self.user_id[-4:]}-0001",
+            "request_id": Time.timestamp(),
             "flow_id": self.flow_id,
             "test_scenario": "complete_flow_step1"
         }
@@ -186,7 +192,7 @@ class MBTIFlowTestRunner:
         request_data = {
             "intent": "mbti_step2",
             "user_id": self.user_id,
-            "request_id": f"2024-12-19T11:05:00+0800_step2-flow-test-{self.user_id[-4:]}-0002",
+            "request_id": Time.timestamp(),
             "flow_id": self.flow_id,
             "responses": mock_responses,  # 提供模拟的问卷答案
             "test_scenario": "complete_flow_step2"
@@ -229,9 +235,9 @@ class MBTIFlowTestRunner:
         request_data = {
             "intent": "mbti_step3",
             "user_id": self.user_id,
-            "request_id": f"2024-12-19T11:10:00+0800_step3-flow-test-{self.user_id[-4:]}-0003",
+            "request_id": Time.timestamp(),
             "flow_id": self.flow_id,
-            "mbti_result": mbti_result,  # 传递step2的MBTI计算结果
+            "mbti_type": mbti_result.get("mbti_type"),  # 传递MBTI类型字符串（step3期望的格式）
             "test_scenario": "complete_flow_step3"
         }
         
@@ -266,14 +272,16 @@ class MBTIFlowTestRunner:
         
         # 基于step3的反向问题生成模拟答案
         reverse_responses = self.generate_mock_reverse_responses()
+        mbti_result = self.flow_state.get("mbti_result", {})
         
         # 构建step4请求数据
         request_data = {
             "intent": "mbti_step4",
             "user_id": self.user_id,
-            "request_id": f"2024-12-19T11:15:00+0800_step4-flow-test-{self.user_id[-4:]}-0004",
+            "request_id": Time.timestamp(),
             "flow_id": self.flow_id,
-            "reverse_responses": reverse_responses,  # 提供反向问题答案
+            "responses": reverse_responses,  # step4期望参数名为responses
+            "mbti_type": mbti_result.get("mbti_type"),  # step4需要的MBTI类型
             "test_scenario": "complete_flow_step4"
         }
         
@@ -289,11 +297,15 @@ class MBTIFlowTestRunner:
         # 提取并分析step4结果
         result = self.extract_step_result(response, "step4")
         
-        # 更新流程状态，保存确认的MBTI类型
+        # 更新流程状态，保存Step4的计分结果
         if result.get("success"):
             self.flow_state["step4_completed"] = True
-            self.flow_state["confirmed_type"] = result.get("confirmed_type")
             self.flow_state["current_step"] = "mbti_step4"
+            self.flow_state["step4_result"] = {
+                "dimension_scores": result.get("dimension_scores", {}),
+                "reverse_dimensions": result.get("reverse_dimensions", []),
+                "mbti_type": result.get("mbti_type")
+            }
         
         return result
     
@@ -306,16 +318,19 @@ class MBTIFlowTestRunner:
         """
         print("\n--- 执行 Step5: 最终报告生成 ---")
         
-        # 从step4结果中获取确认的MBTI类型
-        confirmed_type = self.flow_state.get("confirmed_type")
+        # 从step4结果中获取相关数据构建step5请求
+        mbti_result = self.flow_state.get("mbti_result", {})
+        step4_result = self.flow_state.get("step4_result", {})
         
         # 构建step5请求数据
         request_data = {
             "intent": "mbti_step5",
             "user_id": self.user_id,
-            "request_id": f"2024-12-19T11:20:00+0800_step5-flow-test-{self.user_id[-4:]}-0005",
+            "request_id": Time.timestamp(),
             "flow_id": self.flow_id,
-            "confirmed_type": confirmed_type,  # 传递确认的MBTI类型
+            "mbti_type": mbti_result.get("mbti_type"),  # step5需要的MBTI类型
+            "reverse_dimensions": step4_result.get("reverse_dimensions", ["E", "S", "F", "J"]),
+            "dimension_scores": step4_result.get("dimension_scores", {}),
             "test_scenario": "complete_flow_step5"
         }
         
@@ -377,31 +392,28 @@ class MBTIFlowTestRunner:
         
         return result
     
-    def generate_mock_mbti_responses(self) -> Dict[str, int]:
+    def generate_mock_mbti_responses(self) -> Dict[int, int]:
         """
         generate_mock_mbti_responses方法生成模拟的MBTI问卷答案
+        匹配前端实际提交格式：数字索引键
         
         Returns:
-            Dict[str, int]: 模拟的问卷答案数据
+            Dict[int, int]: 模拟的问卷答案数据，格式 {0: 4, 1: 3, ...}
         """
-        # 生成一套完整的模拟MBTI答案（使用1-5量表）
-        return {
-            # E/I 维度题目 (外向/内向)
-            "E1": 4, "E2": 3, "E3": 4, "E4": 3,
-            "I1": 2, "I2": 3, "I3": 2, "I4": 3,
-            
-            # S/N 维度题目 (感觉/直觉)
-            "S1": 3, "S2": 4, "S3": 3, "S4": 4,
-            "N1": 4, "N2": 3, "N3": 4, "N4": 3,
-            
-            # T/F 维度题目 (思考/情感)
-            "T1": 4, "T2": 3, "T3": 4, "T4": 3,
-            "F1": 2, "F2": 3, "F3": 2, "F4": 3,
-            
-            # J/P 维度题目 (判断/感知)
-            "J1": 4, "J2": 3, "J3": 4, "J4": 3,
-            "P1": 2, "P2": 3, "P3": 2, "P4": 3
-        }
+        # 生成96题的模拟答案（匹配step1_mbti_questions.json中的题目数量）
+        # 使用1-5量表，模拟真实用户的多样化回答
+        import random
+        responses = {}
+        
+        # 为96个问题生成模拟答案
+        for i in range(96):
+            # 模拟不同倾向的答案分布
+            if i % 8 < 4:  # E/S/T/J 倾向题目
+                responses[i] = random.choice([3, 4, 4, 5])  # 偏向高分
+            else:  # I/N/F/P 倾向题目  
+                responses[i] = random.choice([1, 2, 2, 3])  # 偏向低分
+        
+        return responses
     
     def generate_mock_reverse_responses(self) -> Dict[str, int]:
         """

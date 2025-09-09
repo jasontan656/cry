@@ -17,6 +17,9 @@ from typing import Dict, Any, List, Tuple
 project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 sys.path.insert(0, project_root)
 
+# 先导入MBTI模块以触发自注册机制
+import applications.mbti
+
 # 从hub.hub模块导入run函数，这是系统的主要调度入口
 from hub.hub import run as dispatcher_handler
 

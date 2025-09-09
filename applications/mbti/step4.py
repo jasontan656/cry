@@ -210,26 +210,19 @@ async def process(request: Dict[str, Union[str, int, bool, None, Dict, List]]) -
         # scorer.calculate_scores 方法通过传入 responses 和 reverse_dimensions 参数计算得分
         dimension_scores = scorer.calculate_scores(responses, reverse_dimensions)
         
-        # 计算完成后，自动触发step5生成最终报告
-        # 从 flow_router 模块导入 process_with_flow_context 函数，用于路由到step5
-        from applications.mbti.flow_router import process_with_flow_context
-        
-        # step5_request 通过字典创建step5请求，包含完整的计分结果数据
-        step5_request = {
-            "intent": "mbti_step5",  # 指定路由到step5
+        # Step4职责：只返回反向问题计分结果，不调用Step5
+        # 返回Step4自己的处理结果，供后续Step5使用
+        return {
             "request_id": request_id,
             "user_id": user_id,
+            "flow_id": request.get("flow_id", "mbti_personality_test"),
+            "success": True,
+            "step": "mbti_step4",
             "mbti_type": mbti_type,
             "reverse_dimensions": reverse_dimensions,
-            "dimension_scores": dimension_scores
+            "dimension_scores": dimension_scores,
+            "completed": False  # Step4只是中间步骤，不是最终完成
         }
-        
-        # process_with_flow_context 函数通过传入 intent 和 step5_request 参数调用flow_router路由到step5
-        # await 等待step5异步执行完成，返回最终报告结果赋值给 final_result 变量
-        final_result = await process_with_flow_context("mbti_step5", step5_request)
-        
-        # return 语句返回step5生成的最终报告结果
-        return final_result
 
     # except 捕获 Exception 异常，当系统异常发生时执行
     except Exception as e:

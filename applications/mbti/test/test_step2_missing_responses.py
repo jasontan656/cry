@@ -15,6 +15,12 @@ from typing import Dict, Any
 project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 sys.path.insert(0, project_root)
 
+# 先导入MBTI模块以触发自注册机制
+import applications.mbti
+
+# 导入Time类用于生成正确格式的Request ID
+from utilities.time import Time
+
 # 从hub.hub模块导入run函数，这是系统的主要调度入口
 from hub.hub import run as dispatcher_handler
 
@@ -31,7 +37,7 @@ async def test_step2_missing_responses_field():
     request_data = {
         "intent": "mbti_step2",  # MBTI第二步，需要处理问卷答案
         "user_id": "test_user_step2_missing_responses", 
-        "request_id": "2024-12-19T10:15:00+0800_step2-test-1234-5678-9abc-defghijklmno",
+        "request_id": Time.timestamp(),
         "flow_id": "mbti_personality_test",
         "test_scenario": "step2_missing_responses_validation",
         # 注意：故意不包含responses字段
@@ -200,21 +206,19 @@ async def test_step2_with_valid_responses():
     
     # 构建包含有效responses字段的step2请求
     # 使用模拟的MBTI问卷答案数据
-    valid_responses = {
-        "question_1": 4,  # 假设使用1-5量表
-        "question_2": 2,
-        "question_3": 5,
-        "question_4": 3,
-        "question_5": 1,
-        # 添加更多模拟答案以确保数据完整性
-        "E1": 4, "I1": 2, "S1": 3, "N1": 4,
-        "T1": 3, "F1": 4, "J1": 5, "P1": 2
-    }
+    # 使用数字索引格式生成有效responses
+    import random
+    valid_responses = {}
+    for i in range(96):
+        if i % 8 < 4:
+            valid_responses[i] = random.choice([3, 4, 4, 5])
+        else:
+            valid_responses[i] = random.choice([1, 2, 2, 3])
     
     request_data = {
         "intent": "mbti_step2",
         "user_id": "test_user_step2_valid_responses",
-        "request_id": "2024-12-19T10:25:00+0800_valid-resp-1234-5678-9abc-defghijklmno", 
+        "request_id": Time.timestamp(), 
         "flow_id": "mbti_personality_test",
         "responses": valid_responses,  # 提供有效的responses字段
         "test_scenario": "valid_responses_processing"

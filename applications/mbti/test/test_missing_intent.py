@@ -15,6 +15,12 @@ from typing import Dict, Any
 project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 sys.path.insert(0, project_root)
 
+# 先导入MBTI模块以触发自注册机制
+import applications.mbti
+
+# 导入Time类用于生成正确格式的Request ID  
+from utilities.time import Time
+
 # 从hub.hub模块导入run函数，这是系统的主要调度入口
 from hub.hub import run as dispatcher_handler
 
@@ -30,7 +36,7 @@ async def test_missing_intent_field():
     # 包含user_id、request_id等正常字段，但故意省略intent字段
     request_data = {
         "user_id": "test_user_missing_intent",
-        "request_id": "2024-12-19T10:00:00+0800_12345678-1234-4123-8123-123456789abc",
+        "request_id": Time.timestamp(),
         "flow_id": "mbti_personality_test",
         "test_scenario": "missing_intent_validation"
     }
@@ -70,7 +76,13 @@ async def test_missing_intent_field():
         print(f"\nEXCEPTION:")
         print(f"测试执行异常: {str(e)}")
         print(f"异常类型: {type(e).__name__}")
-        test_result = "FAILED"
+        
+        # 对于缺失intent字段，抛出InvalidIntentError或相关异常是期望的安全行为
+        if "Missing intent field" in str(e) or "InvalidIntentError" in str(type(e).__name__):
+            print("✓ 异常符合预期，系统正确拒绝了缺失intent的请求")
+            test_result = "PASSED"
+        else:
+            test_result = "FAILED"
     
     print(f"\nFINAL RESULT: TEST {test_result}")
     return test_result
